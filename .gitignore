@@ -1,0 +1,70 @@
+# === NODE.JS / BACKEND ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.log
+
+# === EXPO / REACT NATIVE ===
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# === NATIVE FILES ===
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# === METRO (REACT NATIVE BUNDLER) ===
+.metro-health-check*
+
+# === ENVIRONMENT VARIABLES ===
+.env
+.env*.local
+.env.production
+.env.development
+
+# === TYPESCRIPT ===
+*.tsbuildinfo
+dist/
+build/
+
+# === OPERATING SYSTEM ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.pem
+
+# === IDEs & EDITORS ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === DEPENDENCIES ===
+node_modules/
+jspm_packages/
+
+# === COVERAGE & TESTING ===
+coverage/
+*.lcov
+.nyc_output
+
+# === MISC ===
+*.tgz
+*.tar.gz
+.cache/
+
+# Keep example files for reference
+app-example 
