@@ -132,16 +132,16 @@ const startServer = () => {
 ║                     🚀 ARTEFACT AI BACKEND                    ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  🌐 Server URL: http://localhost:${PORT}                         ║
-║  📊 Health Check: http://localhost:${PORT}/health               ║
-║  🧪 Test API: http://localhost:${PORT}/api/test                 ║
+║  🌐 Server URL: http://localhost:${PORT}                      ║
+║  📊 Health Check: http://localhost:${PORT}/health             ║
+║  🧪 Test API: http://localhost:${PORT}/api/test               ║
 ║                                                               ║
-║  🔥 Environment: ${(process.env.NODE_ENV || 'development').toUpperCase().padEnd(11)}                      ║
-║  ⚡ Node.js: ${process.version.padEnd(15)}                       ║
+║  🔥 Environment: ${(process.env.NODE_ENV || 'development').toUpperCase().padEnd(11)}║
+║  ⚡ Node.js: ${process.version.padEnd(15)}                     ║
 ║  📦 TypeScript: Enabled                                       ║
-║  🔄 Auto-reload: ${process.env.NODE_ENV === 'development' ? 'Enabled ' : 'Disabled'}                                ║
+║  🔄 Auto-reload: ${process.env.NODE_ENV === 'development' ? 'Enabled ' : 'Disabled'}║
 ║                                                               ║
-║  📝 API calls will be tracked and logged below...            ║
+║  📝 API calls will be tracked and logged below...             ║
 ╚═══════════════════════════════════════════════════════════════╝
     `;
     
