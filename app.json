@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "artefact-mobile",
-    "slug": "artefact-mobile",
+    "slug": "artefact-ai-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -37,6 +37,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "708a90a4-b2a4-40f4-8fce-7b18e4779721"
+      }
+    },
+    "owner": "graslowsnail"
   }
 }
