@@ -37,6 +37,21 @@ async function searchMET(query: string) {
     console.log("FETCHING ARTWORK FROM", `${baseUrl}?${searchParams}`);
 
     const response = await fetch(`${baseUrl}?${searchParams}`);
+    
+    // Check if the response is OK and contains JSON
+    if (!response.ok) {
+        console.error(`❌ MET API error: ${response.status} ${response.statusText}`);
+        throw new Error(`MET API returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        console.error(`❌ MET API returned non-JSON response: ${contentType}`);
+        const text = await response.text();
+        console.error("Response preview:", text.substring(0, 200));
+        throw new Error('MET API returned non-JSON response (possibly rate limited or down)');
+    }
+
     const data = await response.json() as METSearchResponse;
 
     console.log("📊 Found", data.total, "artworks");
@@ -66,6 +81,19 @@ async function searchMET(query: string) {
                 const objResponse = await fetch(
                     `https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`,
                 );
+                
+                // Check if individual object response is valid JSON
+                if (!objResponse.ok) {
+                    console.error(`❌ MET object API error for ${id}: ${objResponse.status}`);
+                    return null;
+                }
+                
+                const objContentType = objResponse.headers.get('content-type');
+                if (!objContentType || !objContentType.includes('application/json')) {
+                    console.error(`❌ MET object API returned non-JSON for ${id}: ${objContentType}`);
+                    return null;
+                }
+                
                 const objData = await objResponse.json() as METObjectResponse;
 
                 // Only update if we got a valid image URL
@@ -191,9 +219,20 @@ router.post('/search', async (req, res) => {
 
     } catch (error) {
         console.error("❌ Artwork search error:", error);
-        res.status(500).json({ 
-            error: 'Internal server error during artwork search' 
-        });
+        
+        // Check if this is a MET API specific error
+        if (error instanceof Error && error.message.includes('MET API')) {
+            res.status(503).json({ 
+                error: 'Museum API temporarily unavailable',
+                message: 'The Metropolitan Museum API is experiencing issues. Please try again in a few moments.',
+                details: error.message
+            });
+        } else {
+            res.status(500).json({ 
+                error: 'Internal server error during artwork search',
+                message: 'Something went wrong while searching for artworks. Please try again.'
+            });
+        }
     }
 });
 
