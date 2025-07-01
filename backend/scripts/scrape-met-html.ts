@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 /**
- * 🕵️ Met HTML Scraper
+ * 🚀 Met HTML Scraper (OPTIMIZED)
  * 
  * Scrapes actual Met website pages to get:
  * - Rich descriptions and context
@@ -27,7 +27,7 @@ if (!process.env.DATABASE_URL) {
 
 // Config
 const DRY_RUN = process.argv.includes('--dry-run');
-const DELAY = 1000; // 1 second between requests (faster than API!)
+const DELAY = 700; // Reduced to 700ms → 30% faster total, test this safely first!
 const LIMIT = process.argv.includes('--limit') ? parseInt(process.argv[process.argv.indexOf('--limit') + 1]) : null;
 
 /**
@@ -130,8 +130,8 @@ function extractMetadata(html: string, objectId: number) {
 }
 
 async function main() {
-  console.log('\n �️Met HTML Scraper');
-  console.log('===================\n');
+  console.log('\n🚀 Met HTML Scraper (OPTIMIZED)');
+  console.log('================================\n');
   
   if (DRY_RUN) {
     console.log('🧪 DRY RUN - No database changes\n');
@@ -140,19 +140,28 @@ async function main() {
   // Import database stuff dynamically after env vars are loaded
   const { db } = await import('../src/db/index.js');
   const { artwork } = await import('../src/db/schema.js');
-  const { desc, eq } = await import('drizzle-orm');
+  const { desc, eq, or, isNull } = await import('drizzle-orm');
 
-  // Get ALL artworks (we want to enhance existing data too)
-  console.log('🔍 Getting artworks to scrape...');
+  // Get ONLY artworks that need enhancement (way more efficient!)
+  console.log('🔍 Getting artworks that need enhancement...');
   
   let query = db
     .select({
       id: artwork.id,
       object_id: artwork.object_id,
       title: artwork.title,
-      current_primary_image: artwork.primary_image
+      current_primary_image: artwork.primary_image,
+      current_description: artwork.description,
+      current_artist: artwork.artist
     })
     .from(artwork)
+    .where(
+      or(
+        isNull(artwork.primary_image),  // Missing image
+        isNull(artwork.description),    // Missing description
+        isNull(artwork.artist)          // Missing artist
+      )
+    )
     .orderBy(desc(artwork.object_id)); // Start from highest IDs (newest)
     
   if (LIMIT) {
@@ -161,7 +170,21 @@ async function main() {
   
   const artworksToScrape = await query;
 
-  console.log(`📊 Found ${artworksToScrape.length} artworks to scrape\n`);
+  // Better statistics
+  let needImage = 0;
+  let needDescription = 0; 
+  let needArtist = 0;
+  artworksToScrape.forEach(art => {
+    if (!art.current_primary_image) needImage++;
+    if (!art.current_description) needDescription++;
+    if (!art.current_artist) needArtist++;
+  });
+
+  console.log(`📊 Found ${artworksToScrape.length} artworks to enhance:`);
+  console.log(`   🖼️  Need images: ${needImage}`);
+  console.log(`   📝 Need descriptions: ${needDescription}`);
+  console.log(`   👨‍🎨 Need artist info: ${needArtist}`);
+  console.log(`   ⚡ Estimated time: ~${Math.ceil((artworksToScrape.length * 0.8) / 3600)} hours\n`);
   
   let processed = 0;
   let updated = 0;
@@ -169,6 +192,8 @@ async function main() {
   let errors = 0;
   let newImages = 0;
   let newDescriptions = 0;
+  
+  const startTime = Date.now();
 
   // Loop through each artwork
   for (const artworkItem of artworksToScrape) {
@@ -201,8 +226,8 @@ async function main() {
       const html = await response.text();
       
       // Check if page has content (not a 404 disguised as 200)
-      if (html.includes('Page Not Found') || html.includes('404')) {
-        console.log(`   ⚠️  Page not found`);
+      if (html.includes('Page Not Found') || html.includes('404') || html.length < 1000) {
+        console.log(`   ⚠️  Page not found or empty`);
         skipped++;
         continue;
       }
@@ -210,19 +235,19 @@ async function main() {
       // Extract all the metadata
       const metadata = extractMetadata(html, artworkItem.object_id);
       
-      // Check what we found
+      // Check what we found and what we actually need
       const foundImage = metadata.iiif_image_url && !artworkItem.current_primary_image;
-      const foundDescription = metadata.description;
+      const foundDescription = metadata.description && !artworkItem.current_description;
       const foundEnhancedData = metadata.artist || metadata.date || metadata.culture || metadata.medium;
       
       if (foundImage || foundDescription || foundEnhancedData) {
-        console.log(`   ✅ Found rich data!`);
+        console.log(`   ✅ Found useful data!`);
         if (foundImage) {
           console.log(`      🖼️  New IIIF image: ${metadata.iiif_image_url}`);
           newImages++;
         }
         if (foundDescription) {
-          console.log(`      📝 Description: ${metadata.description?.substring(0, 100)}...`);
+          console.log(`      📝 Description: ${metadata.description?.substring(0, 80)}...`);
           newDescriptions++;
         }
         
@@ -245,10 +270,9 @@ async function main() {
           if (metadata.classification) updateData.classification = metadata.classification;
           if (metadata.artist_bio) updateData.artist_display_bio = metadata.artist_bio;
           
-          // For now, store description in credit_line if we don't have a description field
-          // TODO: Add description field to schema
-          if (metadata.description && !updateData.credit_line) {
-            updateData.credit_line = metadata.description;
+          // Use the proper description field now!
+          if (metadata.description && !artworkItem.current_description) {
+            updateData.description = metadata.description;
           }
           
           if (Object.keys(updateData).length > 0) {
@@ -261,7 +285,7 @@ async function main() {
         
         updated++;
       } else {
-        console.log(`   ⚠️  No useful data found`);
+        console.log(`   ⚠️  No new data found`);
         skipped++;
       }
       
@@ -270,16 +294,21 @@ async function main() {
       errors++;
     }
     
-    // Progress update every 50
-    if (processed % 50 === 0) {
-      console.log(`\n📊 Progress: ${processed}/${artworksToScrape.length} | ✅ ${updated} | 🖼️ ${newImages} | 📝 ${newDescriptions} | ⚠️ ${skipped} | ❌ ${errors}\n`);
+    // Better progress updates with ETA
+    if (processed % 100 === 0) {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const rate = processed / elapsed;
+      const eta = Math.ceil((artworksToScrape.length - processed) / rate / 3600);
+      console.log(`\n📊 Progress: ${processed}/${artworksToScrape.length} | ✅ ${updated} | 🖼️ ${newImages} | 📝 ${newDescriptions} | ⚠️ ${skipped} | ❌ ${errors}`);
+      console.log(`⚡ Rate: ${rate.toFixed(1)}/sec | ETA: ${eta}h\n`);
     }
     
-    // Wait between requests
+    // Optimized wait (20% faster)
     await new Promise(resolve => setTimeout(resolve, DELAY));
   }
   
-  // Final summary
+  // Final summary with performance stats
+  const totalTime = (Date.now() - startTime) / 1000;
   console.log('\n🎉 Scraping Complete!');
   console.log('====================');
   console.log(`📊 Total processed: ${processed}`);
@@ -288,6 +317,8 @@ async function main() {
   console.log(`📝 New descriptions found: ${newDescriptions}`);
   console.log(`⚠️  Skipped: ${skipped}`);
   console.log(`❌ Errors: ${errors}`);
+  console.log(`⏱️  Total time: ${(totalTime / 3600).toFixed(1)} hours`);
+  console.log(`⚡ Average rate: ${(processed / totalTime).toFixed(1)} items/sec`);
   
   if (DRY_RUN) {
     console.log('\n🧪 DRY RUN - No changes made');
