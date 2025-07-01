@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { auth } from './auth';
 import { toNodeHandler } from 'better-auth/node';
+import artworkRoutes from './routes/artwork.js';
 
 // Load environment variables
 dotenv.config();
@@ -26,6 +27,9 @@ app.all('/api/auth/*', toNodeHandler(auth));
 // Other middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// API Routes
+app.use('/api/artwork', artworkRoutes);
 
 // Custom Morgan format for beautiful API call tracking
 morgan.token('timestamp', () => {
@@ -112,7 +116,8 @@ app.get('/', (req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       test: '/api/test',
-      auth: '/api/auth/*'
+      auth: '/api/auth/*',
+      artworkSearch: '/api/artwork/search'
     }
   });
 });
@@ -150,6 +155,7 @@ const startServer = () => {
 ║  📊 Health Check: http://localhost:${PORT}/health             ║
 ║  🧪 Test API: http://localhost:${PORT}/api/test               ║
 ║  🔐 Auth API: http://localhost:${PORT}/api/auth/*             ║
+║  🎨 Artwork Search: http://localhost:${PORT}/api/artwork/search║
 ║                                                               ║
 ║  🔥 Environment: ${(process.env.NODE_ENV || 'development').toUpperCase().padEnd(11)}║
 ║  ⚡ Node.js: ${process.version.padEnd(15)}                     ║

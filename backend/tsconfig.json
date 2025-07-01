@@ -5,7 +5,6 @@
     "lib": ["ES2020"],
     "types": ["node"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -22,13 +21,15 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
-    "baseUrl": "./",
+    "baseUrl": "../",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["backend/src/*"],
+      "@shared/*": ["shared/*"]
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../shared/**/*"
   ],
   "exclude": [
     "node_modules",
