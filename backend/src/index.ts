@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { auth } from './auth';
 import { toNodeHandler } from 'better-auth/node';
 import artworkRoutes from './routes/artwork.js';
+import vaultRoutes from './routes/vault.js';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/api/artwork', artworkRoutes);
+app.use('/api/vault', vaultRoutes);
 
 // Custom Morgan format for beautiful API call tracking
 morgan.token('timestamp', () => {
@@ -117,7 +119,12 @@ app.get('/', (req: Request, res: Response) => {
       health: '/health',
       test: '/api/test',
       auth: '/api/auth/*',
-      artworkSearch: '/api/artwork/search'
+      artworkSearch: '/api/artwork/search',
+      vault: {
+        toggle: '/api/vault/toggle',
+        check: '/api/vault/check/:objectId',
+        myVault: '/api/vault/my-vault'
+      }
     }
   });
 });
@@ -156,6 +163,7 @@ const startServer = () => {
 ║  🧪 Test API: http://localhost:${PORT}/api/test               ║
 ║  🔐 Auth API: http://localhost:${PORT}/api/auth/*             ║
 ║  🎨 Artwork Search: http://localhost:${PORT}/api/artwork/search║
+║  🔐 Vault API: http://localhost:${PORT}/api/vault/*           ║
 ║                                                               ║
 ║  🔥 Environment: ${(process.env.NODE_ENV || 'development').toUpperCase().padEnd(11)}║
 ║  ⚡ Node.js: ${process.version.padEnd(15)}                     ║
