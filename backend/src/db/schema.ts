@@ -75,6 +75,7 @@ export const artwork = pgTable("artwork", {
   id: text("id").primaryKey(),
   object_id: integer("object_id").notNull().unique(),
   title: text("title").notNull(),
+  description: text("description"), // Rich description and context from HTML scraping
   artist: text("artist"),
   date: text("date"),
   medium: text("medium"),

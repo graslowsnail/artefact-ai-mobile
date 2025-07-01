@@ -14,7 +14,12 @@
     "dev:bun": "bun --watch src/index.ts",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fetch-images": "tsx scripts/fetch-missing-images.ts",
+    "fetch-images:dry": "tsx scripts/fetch-missing-images.ts --dry-run",
+    "scrape-html": "tsx scripts/scrape-met-html.ts",
+    "scrape-html:dry": "tsx scripts/scrape-met-html.ts --dry-run",
+    "scrape-html:test": "tsx scripts/scrape-met-html.ts --dry-run --limit 5"
   },
   "keywords": [],
   "author": "",
