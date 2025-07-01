@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { auth } from './auth';
+import { toNodeHandler } from 'better-auth/node';
 
 // Load environment variables
 dotenv.config();
@@ -9,8 +11,19 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// CORS configuration with credentials support
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:8081', // Expo dev server
+  ],
+  credentials: true,
+}));
+
+// Better Auth handler - MUST be before express.json()
+app.all('/api/auth/*', toNodeHandler(auth));
+
+// Other middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -98,7 +111,8 @@ app.get('/', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       health: '/health',
-      test: '/api/test'
+      test: '/api/test',
+      auth: '/api/auth/*'
     }
   });
 });
@@ -135,6 +149,7 @@ const startServer = () => {
 ║  🌐 Server URL: http://localhost:${PORT}                      ║
 ║  📊 Health Check: http://localhost:${PORT}/health             ║
 ║  🧪 Test API: http://localhost:${PORT}/api/test               ║
+║  🔐 Auth API: http://localhost:${PORT}/api/auth/*             ║
 ║                                                               ║
 ║  🔥 Environment: ${(process.env.NODE_ENV || 'development').toUpperCase().padEnd(11)}║
 ║  ⚡ Node.js: ${process.version.padEnd(15)}                     ║
