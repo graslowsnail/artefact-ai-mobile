@@ -12,6 +12,11 @@ export default function HomeScreen() {
   const [hasSearched, setHasSearched] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedArtwork, setSelectedArtwork] = useState<MuseumArtwork | null>(null);
+  const [favoriteStatus, setFavoriteStatus] = useState<{[key: number]: boolean}>({});
+  const [loadingFavorite, setLoadingFavorite] = useState(false);
+  const [showVault, setShowVault] = useState(false);
+  const [vaultArtworks, setVaultArtworks] = useState<MuseumArtwork[]>([]);
+  const [loadingVault, setLoadingVault] = useState(false);
 
   // Reset search state when user changes
   useEffect(() => {
@@ -23,6 +28,11 @@ export default function HomeScreen() {
       setLoading(false);
       setHasSearched(false);
       setSelectedArtwork(null);
+      setFavoriteStatus({});
+      setLoadingFavorite(false);
+      setShowVault(false);
+      setVaultArtworks([]);
+      setLoadingVault(false);
       setCurrentUserId(session?.user?.id || null);
     }
   }, [session?.user?.id, currentUserId]);
@@ -35,6 +45,11 @@ export default function HomeScreen() {
       setLoading(false);
       setHasSearched(false);
       setSelectedArtwork(null);
+      setFavoriteStatus({});
+      setLoadingFavorite(false);
+      setShowVault(false);
+      setVaultArtworks([]);
+      setLoadingVault(false);
       
       await signOut();
       Alert.alert('Success', 'Signed out successfully!');
@@ -97,18 +112,129 @@ export default function HomeScreen() {
     }
   };
 
-  const handleArtworkPress = (artwork: MuseumArtwork) => {
+  const handleArtworkPress = async (artwork: MuseumArtwork) => {
     setSelectedArtwork(artwork);
+    
+    // Check if this artwork is favorited
+    if (session?.user?.id && favoriteStatus[artwork.object_id] === undefined) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/vault/check/${artwork.object_id}`, {
+          headers: {
+            'Authorization': `Bearer ${session.session.token}`,
+            'x-user-id': session.user.id,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFavoriteStatus(prev => ({
+            ...prev,
+            [artwork.object_id]: data.isFavorited
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    }
   };
 
   const handleBackToList = () => {
     setSelectedArtwork(null);
   };
 
-  const handleToggleFavorite = (artwork: MuseumArtwork) => {
-    // TODO: Implement favorites functionality
-    Alert.alert('Coming Soon', 'Favorites feature will be available soon!');
-    console.log('Toggle favorite for artwork:', artwork.object_id);
+  const handleOpenVault = async () => {
+    if (!session?.user?.id) {
+      Alert.alert('Error', 'Please sign in to view your vault');
+      return;
+    }
+
+    setLoadingVault(true);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/vault/my-vault', {
+        headers: {
+          'Authorization': `Bearer ${session.session.token}`,
+          'x-user-id': session.user.id,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to load vault');
+      }
+
+      const data = await response.json();
+      setVaultArtworks(data.vault);
+      setShowVault(true);
+      
+    } catch (error) {
+      console.error('Load vault error:', error);
+      Alert.alert(
+        'Error', 
+        error instanceof Error ? error.message : 'Failed to load vault'
+      );
+    } finally {
+      setLoadingVault(false);
+    }
+  };
+
+  const handleBackFromVault = () => {
+    setShowVault(false);
+  };
+
+  const handleToggleFavorite = async (artwork: MuseumArtwork) => {
+    if (!session?.user?.id) {
+      Alert.alert('Error', 'Please sign in to add artworks to your vault');
+      return;
+    }
+
+    setLoadingFavorite(true);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/vault/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.token}`,
+          'x-user-id': session.user.id,
+        },
+        body: JSON.stringify({ objectId: artwork.object_id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to toggle favorite');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      setFavoriteStatus(prev => ({
+        ...prev,
+        [artwork.object_id]: data.isFavorited
+      }));
+
+      // If vault is currently shown and item was removed, refresh the vault
+      if (showVault && !data.isFavorited) {
+        setVaultArtworks(prev => prev.filter(item => item.object_id !== artwork.object_id));
+      }
+
+      // Show success message
+      Alert.alert(
+        'Vault Updated',
+        data.message,
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.error('Toggle favorite error:', error);
+      Alert.alert(
+        'Error', 
+        error instanceof Error ? error.message : 'Failed to update vault'
+      );
+    } finally {
+      setLoadingFavorite(false);
+    }
   };
 
   const handleOpenMuseumLink = async (url: string) => {
@@ -165,10 +291,21 @@ export default function HomeScreen() {
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.favoriteButton} 
+          style={[
+            styles.favoriteButton, 
+            favoriteStatus[artwork.object_id] && styles.favoriteButtonActive,
+            loadingFavorite && styles.favoriteButtonLoading
+          ]} 
           onPress={() => handleToggleFavorite(artwork)}
+          disabled={loadingFavorite}
         >
-          <Text style={styles.favoriteButtonText}>❤️ Add to Favorites</Text>
+          <Text style={[
+            styles.favoriteButtonText,
+            favoriteStatus[artwork.object_id] && styles.favoriteButtonActiveText
+          ]}>
+            {loadingFavorite ? '⏳ ' : (favoriteStatus[artwork.object_id] ? '💖 ' : '🤍 ')}
+            {favoriteStatus[artwork.object_id] ? 'Remove from Vault' : 'Add to Vault'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -240,9 +377,63 @@ export default function HomeScreen() {
     </View>
   );
 
+  const renderVaultScreen = () => (
+    <View style={styles.container}>
+      {/* Vault Header */}
+      <View style={styles.vaultHeader}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackFromVault}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.vaultTitle}>🔐 My Vault</Text>
+        <View style={styles.backButton} />
+      </View>
+
+      {loadingVault ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading your vault...</Text>
+        </View>
+      ) : vaultArtworks.length === 0 ? (
+        <View style={styles.emptyVaultContainer}>
+          <Text style={styles.emptyVaultIcon}>🏛️</Text>
+          <Text style={styles.emptyVaultTitle}>Your Vault is Empty</Text>
+          <Text style={styles.emptyVaultText}>
+            Start exploring artworks and add your favorites to build your personal collection!
+          </Text>
+          <TouchableOpacity 
+            style={styles.exploreButton} 
+            onPress={handleBackFromVault}
+          >
+            <Text style={styles.exploreButtonText}>🔍 Start Exploring</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.vaultContent}>
+          <Text style={styles.vaultCount}>
+            {vaultArtworks.length} artwork{vaultArtworks.length !== 1 ? 's' : ''} in your vault
+          </Text>
+          
+          <FlatList
+            data={vaultArtworks}
+            renderItem={renderArtworkCard}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.artworksList}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      )}
+    </View>
+  );
+
   // Show auth screen if not signed in
   if (!session?.user) {
     return <AuthScreen />;
+  }
+
+  // Show vault screen if vault is open
+  if (showVault) {
+    return renderVaultScreen();
   }
 
   // Show artwork detail if one is selected
@@ -261,9 +452,21 @@ export default function HomeScreen() {
         <Text style={styles.title}>🎨 Artefact AI</Text>
         <Text style={styles.subtitle}>Discover amazing artwork with natural language</Text>
         
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutButtonText}>🚪 Sign Out</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.vaultButton} 
+            onPress={handleOpenVault}
+            disabled={loadingVault}
+          >
+            <Text style={styles.vaultButtonText}>
+              {loadingVault ? '⏳' : '🔐'} My Vault
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <Text style={styles.signOutButtonText}>🚪 Sign Out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchSection}>
@@ -360,6 +563,23 @@ const styles = StyleSheet.create({
     color: '#e6f2ff',
     textAlign: 'center',
     marginBottom: 16,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  vaultButton: {
+    backgroundColor: '#ffd700',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  vaultButtonText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '600',
   },
   signOutButton: {
     backgroundColor: '#ff3b30',
@@ -562,10 +782,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffeaa7',
     borderRadius: 8,
   },
+  favoriteButtonActive: {
+    backgroundColor: '#ff6b6b',
+  },
+  favoriteButtonLoading: {
+    opacity: 0.6,
+  },
   favoriteButtonText: {
     fontSize: 14,
     color: '#e17055',
     fontWeight: '500',
+  },
+  favoriteButtonActiveText: {
+    color: '#fff',
   },
   detailImageContainer: {
     height: 300,
@@ -639,6 +868,69 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   museumButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  
+  // Vault styles
+  vaultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  vaultTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  vaultContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  vaultCount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginVertical: 16,
+    textAlign: 'center',
+  },
+  emptyVaultContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyVaultIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  emptyVaultTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyVaultText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  exploreButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  exploreButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
