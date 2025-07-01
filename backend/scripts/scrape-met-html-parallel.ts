@@ -24,8 +24,8 @@ if (!process.env.DATABASE_URL) {
 
 // Config
 const DRY_RUN = process.argv.includes('--dry-run');
-const DELAY = 300; // BLAZING FAST! 🚀
-const CONCURRENCY = 6; // PUMP IT UP! 6 parallel requests 💪
+const DELAY = 250; // LUDICROUS SPEED! 💀🚀
+const CONCURRENCY = 15; // ABSOLUTELY MENTAL! 10 parallel requests! 🔥💀
 const LIMIT = process.argv.includes('--limit') ? parseInt(process.argv[process.argv.indexOf('--limit') + 1]) : null;
 
 /**
@@ -156,11 +156,12 @@ function extractMetadata(html: string, objectId: number) {
       }
     }
 
-    // Extract more metadata from visible text patterns (with validation)
+    // Extract more metadata from visible text patterns (with STRONG validation)
     function isValidMetadata(text) {
       return text && 
             text.length > 2 && 
             text.length < 200 &&
+            // Reject CSS/JS patterns
             !text.includes('{') && 
             !text.includes('}') && 
             !text.includes('function') &&
@@ -170,7 +171,23 @@ function extractMetadata(html: string, objectId: number) {
             !text.includes('padding:') &&
             !text.includes('webkit') &&
             !text.includes('background:') &&
-            !text.includes('display:');
+            !text.includes('display:') &&
+            // Reject URLs and file paths
+            !text.includes('http') &&
+            !text.includes('//') &&
+            !text.includes('.woff') &&
+            !text.includes('.css') &&
+            !text.includes('.js') &&
+            // Reject HTML attributes
+            !text.includes('crossorigin') &&
+            !text.includes('as=') &&
+            !text.includes('type=') &&
+            !text.includes('src=') &&
+            !text.includes('href=') &&
+            // Reject other garbage
+            !text.includes('assets/') &&
+            !text.includes('dist/') &&
+            !text.includes('fonts/');
     }
 
     // Look for patterns like "Artist Name, dates"
@@ -186,11 +203,7 @@ function extractMetadata(html: string, objectId: number) {
       data.date = dateMatch[1].trim();
     }
 
-    // Look for medium
-    const mediumMatch = html.match(/Medium[^:]*:\s*([^<\n]+)/i);
-    if (mediumMatch && isValidMetadata(mediumMatch[1].trim())) {
-      data.medium = mediumMatch[1].trim();
-    }
+    // Skip medium extraction - too much CSS/JS garbage, most artworks already have it
 
     // Look for culture
     const cultureMatch = html.match(/Culture[^:]*:\s*([^<\n]+)/i);
@@ -266,7 +279,7 @@ async function processArtwork(
     // Check what we found and what we actually need
     const foundImage = metadata.iiif_image_url && !artworkItem.current_primary_image;
     const foundDescription = metadata.description && !artworkItem.current_description;
-    const foundEnhancedData = metadata.artist || metadata.date || metadata.culture || metadata.medium;
+    const foundEnhancedData = metadata.artist || metadata.date || metadata.culture;
     
       if (foundImage || foundDescription || foundEnhancedData) {
       console.log(`   ✅ Found useful data!`);
@@ -279,7 +292,7 @@ async function processArtwork(
         stats.newDescriptions++;
       }
       if (foundEnhancedData && !foundImage && !foundDescription) {
-        console.log(`      📊 Enhanced: artist=${!!metadata.artist}, date=${!!metadata.date}, culture=${!!metadata.culture}, medium=${!!metadata.medium}`);
+        console.log(`      📊 Enhanced: artist=${!!metadata.artist}, date=${!!metadata.date}, culture=${!!metadata.culture}`);
       }
     
       // Update database with rich data
@@ -295,7 +308,7 @@ async function processArtwork(
         if (metadata.artist) updateData.artist = metadata.artist;
         if (metadata.date) updateData.date = metadata.date;
         if (metadata.culture) updateData.culture = metadata.culture;
-        if (metadata.medium) updateData.medium = metadata.medium;
+        // Skip medium - too unreliable, most artworks already have it
         if (metadata.department) updateData.department = metadata.department;
         if (metadata.credit_line) updateData.credit_line = metadata.credit_line;
         if (metadata.classification) updateData.classification = metadata.classification;
@@ -320,8 +333,8 @@ async function processArtwork(
       stats.skipped++;
     }
     
-    // Add some random jitter to look more human (reduced for SPEED!)
-    const jitter = Math.random() * 100; // 0-100ms random delay (FASTER!)
+    // Add some random jitter to look more human (MINIMAL FOR MAX SPEED!)
+    const jitter = Math.random() * 50; // 0-50ms random delay (LUDICROUS SPEED!)
     await new Promise(resolve => setTimeout(resolve, DELAY + jitter));
     
   } catch (error) {
