@@ -70,18 +70,28 @@ export const verification = pgTable("verification", {
   ),
 });
 
-// Artwork table (stores each artwork once)
+// Artwork table (stores each artwork once) - matches existing MET data dump
 export const artwork = pgTable("artwork", {
   id: text("id").primaryKey(),
-  objectID: integer("object_id").notNull().unique(),
+  object_id: integer("object_id").notNull().unique(),
   title: text("title").notNull(),
   artist: text("artist"),
   date: text("date"),
   medium: text("medium"),
-  primaryImage: text("primary_image"),
+  primary_image: text("primary_image"),
   department: text("department"),
   culture: text("culture"),
-  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  created_at: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  additional_images: text("additional_images"),
+  object_url: text("object_url"),
+  is_highlight: boolean("is_highlight").$defaultFn(() => false),
+  artist_display_bio: text("artist_display_bio"),
+  object_begin_date: integer("object_begin_date"),
+  object_end_date: integer("object_end_date"),
+  credit_line: text("credit_line"),
+  classification: text("classification"),
+  artist_nationality: text("artist_nationality"),
+  primary_image_small: text("primary_image_small"),
 });
 
 // Junction table for user favorites
