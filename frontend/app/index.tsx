@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert, TextInput, FlatList, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, TextInput, FlatList, ActivityIndicator, Image, ScrollView, Linking } from 'react-native';
 import { useSession, signOut } from '../lib/auth-client';
 import AuthScreen from './auth';
 import type { MuseumArtwork, ArtworkSearchResponse } from '../../shared/types/index';
@@ -11,6 +11,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedArtwork, setSelectedArtwork] = useState<MuseumArtwork | null>(null);
 
   // Reset search state when user changes
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function HomeScreen() {
       setArtworks([]);
       setLoading(false);
       setHasSearched(false);
+      setSelectedArtwork(null);
       setCurrentUserId(session?.user?.id || null);
     }
   }, [session?.user?.id, currentUserId]);
@@ -32,6 +34,7 @@ export default function HomeScreen() {
       setArtworks([]);
       setLoading(false);
       setHasSearched(false);
+      setSelectedArtwork(null);
       
       await signOut();
       Alert.alert('Success', 'Signed out successfully!');
@@ -94,8 +97,40 @@ export default function HomeScreen() {
     }
   };
 
+  const handleArtworkPress = (artwork: MuseumArtwork) => {
+    setSelectedArtwork(artwork);
+  };
+
+  const handleBackToList = () => {
+    setSelectedArtwork(null);
+  };
+
+  const handleToggleFavorite = (artwork: MuseumArtwork) => {
+    // TODO: Implement favorites functionality
+    Alert.alert('Coming Soon', 'Favorites feature will be available soon!');
+    console.log('Toggle favorite for artwork:', artwork.object_id);
+  };
+
+  const handleOpenMuseumLink = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Cannot open this URL');
+      }
+    } catch (error) {
+      console.error('Error opening URL:', error);
+      Alert.alert('Error', 'Failed to open museum link');
+    }
+  };
+
   const renderArtworkCard = ({ item }: { item: MuseumArtwork }) => (
-    <View style={styles.artworkCard}>
+    <TouchableOpacity 
+      style={styles.artworkCard} 
+      onPress={() => handleArtworkPress(item)}
+      activeOpacity={0.7}
+    >
       {item.primary_image ? (
         <Image 
           source={{ uri: item.primary_image }} 
@@ -119,12 +154,104 @@ export default function HomeScreen() {
           {item.date} • {item.department}
         </Text>
       </View>
+    </TouchableOpacity>
+  );
+
+  const renderArtworkDetail = (artwork: MuseumArtwork) => (
+    <View style={styles.detailContainer}>
+      {/* Header with back button */}
+      <View style={styles.detailHeader}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackToList}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.favoriteButton} 
+          onPress={() => handleToggleFavorite(artwork)}
+        >
+          <Text style={styles.favoriteButtonText}>❤️ Add to Favorites</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+
+      {/* Artwork Image */}
+      <View style={styles.detailImageContainer}>
+        {artwork.primary_image ? (
+          <Image 
+            source={{ uri: artwork.primary_image }} 
+            style={styles.detailImage}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={styles.detailPlaceholder}>
+            <Text style={styles.detailPlaceholderText}>🖼️</Text>
+            <Text style={styles.detailPlaceholderSubtext}>No image available</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Artwork Information */}
+      <View style={styles.detailInfo}>
+        <Text style={styles.detailTitle}>{artwork.title}</Text>
+        <Text style={styles.detailArtist}>by {artwork.artist}</Text>
+        
+        <View style={styles.detailMetadata}>
+          <View style={styles.metadataRow}>
+            <Text style={styles.metadataLabel}>Date:</Text>
+            <Text style={styles.metadataValue}>{artwork.date}</Text>
+          </View>
+          
+          <View style={styles.metadataRow}>
+            <Text style={styles.metadataLabel}>Medium:</Text>
+            <Text style={styles.metadataValue}>{artwork.medium}</Text>
+          </View>
+          
+          <View style={styles.metadataRow}>
+            <Text style={styles.metadataLabel}>Department:</Text>
+            <Text style={styles.metadataValue}>{artwork.department}</Text>
+          </View>
+          
+          {artwork.culture && (
+            <View style={styles.metadataRow}>
+              <Text style={styles.metadataLabel}>Culture:</Text>
+              <Text style={styles.metadataValue}>{artwork.culture}</Text>
+            </View>
+          )}
+          
+          {artwork.credit_line && (
+            <View style={styles.metadataRow}>
+              <Text style={styles.metadataLabel}>Credit:</Text>
+              <Text style={styles.metadataValue}>{artwork.credit_line}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* View at Museum Button */}
+        {artwork.object_url && (
+          <TouchableOpacity 
+            style={styles.museumButton}
+            onPress={() => handleOpenMuseumLink(artwork.object_url!)}
+          >
+            <Text style={styles.museumButtonText}>🏛️ View at Met Museum</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      </ScrollView>
     </View>
   );
 
   // Show auth screen if not signed in
   if (!session?.user) {
     return <AuthScreen />;
+  }
+
+  // Show artwork detail if one is selected
+  if (selectedArtwork) {
+    return (
+      <View style={styles.container}>
+        {renderArtworkDetail(selectedArtwork)}
+      </View>
+    );
   }
 
   // Show main app if signed in
@@ -402,5 +529,118 @@ const styles = StyleSheet.create({
   artworkDate: {
     fontSize: 12,
     color: '#999',
+  },
+  
+  // Detail view styles
+  detailContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  backButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#e9ecef',
+    borderRadius: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#495057',
+    fontWeight: '500',
+  },
+  favoriteButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#ffeaa7',
+    borderRadius: 8,
+  },
+  favoriteButtonText: {
+    fontSize: 14,
+    color: '#e17055',
+    fontWeight: '500',
+  },
+  detailImageContainer: {
+    height: 300,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+  },
+  detailImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  detailPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailPlaceholderText: {
+    fontSize: 48,
+    color: '#adb5bd',
+  },
+  detailPlaceholderSubtext: {
+    fontSize: 16,
+    color: '#6c757d',
+    marginTop: 8,
+  },
+  detailInfo: {
+    flex: 1,
+    padding: 16,
+  },
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#212529',
+    marginBottom: 8,
+  },
+  detailArtist: {
+    fontSize: 18,
+    color: '#6c757d',
+    fontStyle: 'italic',
+    marginBottom: 24,
+  },
+  detailMetadata: {
+    marginBottom: 24,
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  metadataLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#495057',
+    width: 80,
+    marginRight: 12,
+  },
+  metadataValue: {
+    fontSize: 16,
+    color: '#212529',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  museumButton: {
+    backgroundColor: '#4a90e2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  museumButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
