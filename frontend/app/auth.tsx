@@ -35,30 +35,47 @@ export default function AuthScreen() {
     try {
       setLoading(true);
 
+      let result;
+      
       if (mode === 'signup') {
         // Create new account
-        await signUp.email({
+        result = await signUp.email({
           email,
           password,
           name: email.split('@')[0], // Use email username as name
         });
+        
+        if (result?.error) {
+          throw new Error(result.error.message || 'Failed to create account');
+        }
+        
         Alert.alert('Success', 'Account created successfully!');
       } else {
         // Sign in existing user
-        await signIn.email({
+        result = await signIn.email({
           email,
           password,
         });
+        
+        if (result?.error) {
+          throw new Error(result.error.message || 'Invalid email or password');
+        }
+        
         Alert.alert('Success', 'Signed in successfully!');
       }
 
-      // Clear form
+      // Clear form only on success
       setEmail('');
       setPassword('');
       setConfirmPassword('');
     } catch (error) {
       console.error('Auth error:', error);
-      Alert.alert('Error', mode === 'signup' ? 'Failed to create account' : 'Failed to sign in');
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (mode === 'signup' ? 'Failed to create account' : 'Failed to sign in');
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -68,13 +85,23 @@ export default function AuthScreen() {
     try {
       setLoading(true);
       
-      await signIn.social({
+      const result = await signIn.social({
         provider: 'google',
         callbackURL: '/', // Will redirect to home after auth
       });
+      
+      if (result?.error) {
+        throw new Error(result.error.message || 'Google sign in failed');
+      }
+      
     } catch (error) {
       console.error('Google auth error:', error);
-      Alert.alert('Error', 'Google sign in failed');
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Google sign in failed';
+        
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
