@@ -68,3 +68,6 @@ coverage/
 
 # Keep example files for reference
 app-example 
+
+# Ignore Python virtual environments
+data_extraction/venv/
