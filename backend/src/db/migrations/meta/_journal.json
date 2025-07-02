@@ -8,6 +8,20 @@
       "when": 1751408666163,
       "tag": "0000_slow_mandroid",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751488184790,
+      "tag": "0001_thin_colossus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751488419619,
+      "tag": "0002_daffy_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

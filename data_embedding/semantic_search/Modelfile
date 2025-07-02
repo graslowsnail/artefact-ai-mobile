@@ -1,0 +1,16 @@
+FROM llama3
+
+# EXTREME PERFORMANCE - M1 MacBook Pro 16GB BEAST MODE
+PARAMETER num_ctx 8192
+PARAMETER num_gpu 99
+PARAMETER num_thread 10
+PARAMETER num_batch 1024
+PARAMETER repeat_penalty 1.05
+PARAMETER temperature 0.3
+PARAMETER top_p 0.8
+PARAMETER top_k 30
+PARAMETER stop "\n\n"
+PARAMETER stop "---"
+
+# System prompt for art expertise
+SYSTEM You are a renowned art historian and museum curator with expertise in visual analysis and cultural context. Create sophisticated, detailed artwork descriptions that combine visual elements with art historical significance. 

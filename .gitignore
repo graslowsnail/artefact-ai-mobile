@@ -29,11 +29,16 @@ expo-env.d.ts
 .env*.local
 .env.production
 .env.development
+.env.development.local
+.env.test.local
+.env.production.local
 
 # === TYPESCRIPT ===
 *.tsbuildinfo
 dist/
 build/
+.next/
+.turbo/
 
 # === OPERATING SYSTEM ===
 .DS_Store
@@ -71,3 +76,69 @@ app-example
 
 # Ignore Python virtual environments
 data_extraction/venv/
+
+# Python data_embedding specific
+data_embedding/venv/
+data_embedding/.venv/
+data_embedding/__pycache__/
+data_embedding/**/__pycache__/
+data_embedding/**/*.pyc
+data_embedding/**/*.pyo
+data_embedding/**/*.pyd
+data_embedding/.Python
+data_embedding/env/
+data_embedding/ENV/
+data_embedding/env.bak/
+data_embedding/venv.bak/
+data_embedding/.DS_Store
+data_embedding/**/.DS_Store
+
+# Data files (optional - uncomment if you have large datasets)
+# data_embedding/data_scripts/*.json
+# data_embedding/data_scripts/*.csv
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ESLint cache
+.eslintcache
+
+# Optional npm cache directory
+.npm
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
