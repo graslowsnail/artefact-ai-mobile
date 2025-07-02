@@ -13,8 +13,8 @@ export interface MuseumArtwork {
   object_url: string;
   is_highlight: boolean;
   artist_display_bio: string;
-  object_begin_date: number;
-  object_end_date: number;
+  object_begin_date: string;
+  object_end_date: string;
   credit_line: string;
   classification: string;
   artist_nationality: string;

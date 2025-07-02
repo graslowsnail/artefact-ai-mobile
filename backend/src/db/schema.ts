@@ -8,6 +8,7 @@ import {
   timestamp,
   boolean,
   integer,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -87,12 +88,16 @@ export const artwork = pgTable("artwork", {
   object_url: text("object_url"),
   is_highlight: boolean("is_highlight").$defaultFn(() => false),
   artist_display_bio: text("artist_display_bio"),
-  object_begin_date: integer("object_begin_date"),
-  object_end_date: integer("object_end_date"),
+  object_begin_date: text("object_begin_date"),
+  object_end_date: text("object_end_date"),
   credit_line: text("credit_line"),
   classification: text("classification"),
   artist_nationality: text("artist_nationality"),
   primary_image_small: text("primary_image_small"),
+  image_caption: text("image_caption"),
+  embedding_summary: text("embedding_summary"),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  processed_at: timestamp("processed_at"),
 });
 
 // Junction table for user favorites
