@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, 
 import { useSession } from '../../lib/auth-client';
 import type { MuseumArtwork } from '../../../shared/types/index';
 import ArtworkCard from '../components/ArtworkCard';
+import { API_BASE_URL } from '../../config/api';
 
 interface VaultScreenProps {
   onBack: () => void;
@@ -27,7 +28,7 @@ export default function VaultScreen({ onBack, onArtworkPress }: VaultScreenProps
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3000/api/vault/my-vault', {
+      const response = await fetch(`${API_BASE_URL}/api/vault/my-vault`, {
         headers: {
           'Authorization': `Bearer ${session.session.token}`,
           'x-user-id': session.user.id,

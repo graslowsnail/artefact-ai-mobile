@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, Linking } from 'react-native';
 import { useSession } from '../../lib/auth-client';
 import type { MuseumArtwork } from '../../../shared/types/index';
+import { API_BASE_URL } from '../../config/api';
 
 interface ArtworkDetailScreenProps {
   artwork: MuseumArtwork;
@@ -23,7 +24,7 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
     if (!session?.user?.id) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/vault/check/${artwork.object_id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/vault/check/${artwork.object_id}`, {
         headers: {
           'Authorization': `Bearer ${session.session.token}`,
           'x-user-id': session.user.id,
@@ -48,7 +49,7 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
     setLoadingFavorite(true);
     
     try {
-      const response = await fetch('http://localhost:3000/api/vault/toggle', {
+      const response = await fetch(`${API_BASE_URL}/api/vault/toggle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
