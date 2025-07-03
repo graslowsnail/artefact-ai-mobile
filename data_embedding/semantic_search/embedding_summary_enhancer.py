@@ -170,8 +170,9 @@ Create a museum-quality description:"""
                     "stream": False,
                     "options": {
                         "num_predict": 150,      # Slightly shorter for speed
-                        "num_batch": 1024,       # Process more tokens at once
-                        "num_thread": 10         # Use all CPU cores
+                        "num_batch": 2048,       # BIGGER batches = more CPU utilization
+                        "num_thread": -1,        # USE ALL AVAILABLE CORES (-1 = auto-detect)
+                        "num_gpu": 0             #  Force CPU-only (frees up unified memory)
                     }
                 },
                 timeout=20  # BEAST MODE - faster timeout
