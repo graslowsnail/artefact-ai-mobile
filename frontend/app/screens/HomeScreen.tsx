@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert, FlatList, ActivityIndicator, ScrollView } from 'react-native';
 import { useSession } from '../../lib/auth-client';
-import type { MuseumArtwork, ArtworkSearchResponse } from '../../../shared/types/index';
+import type { MuseumArtwork, ArtworkSearchResponse, SemanticSearchResponse, SemanticArtwork } from '../../../shared/types/index';
 import ArtworkCard from '../components/ArtworkCard';
 
 interface HomeScreenProps {
@@ -13,11 +13,13 @@ interface HomeScreenProps {
 export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: HomeScreenProps) {
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
-  const [artworks, setArtworks] = useState<MuseumArtwork[]>([]);
+  const [artworks, setArtworks] = useState<(MuseumArtwork | SemanticArtwork)[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loadingVault, setLoadingVault] = useState(false);
+  const [useSemanticSearch, setUseSemanticSearch] = useState(true); // Default to semantic search
+  const [aiResponse, setAiResponse] = useState<string>('');
 
   // Reset search state when user changes
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
       setLoading(false);
       setHasSearched(false);
       setCurrentUserId(session?.user?.id || null);
+      setAiResponse('');
     }
   }, [session?.user?.id, currentUserId]);
 
@@ -41,12 +44,13 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
       setLoading(true);
       setHasSearched(true);
       
-      const response = await fetch('http://localhost:3000/api/artwork/search', {
+      const endpoint = useSemanticSearch ? '/semantic-search' : '/search';
+      const response = await fetch(`http://localhost:3000/api/artwork${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({ query: searchQuery, limit: 20 }),
       });
 
       if (!response.ok) {
@@ -58,11 +62,33 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
         }
       }
 
-      const data: ArtworkSearchResponse = await response.json();
-      setArtworks(data.artworks);
-      
-      if (data.artworks.length === 0) {
-        Alert.alert('No Results', 'No artworks found for your search. Try different keywords!');
+      if (useSemanticSearch) {
+        const data: SemanticSearchResponse = await response.json();
+        console.log('🔍 Semantic search results:', {
+          total: data.total,
+          artworksCount: data.artworks.length,
+          query: data.query,
+          aiResponse: data.aiResponse.substring(0, 100) + '...'
+        });
+        setArtworks(data.artworks);
+        setAiResponse(data.aiResponse);
+        
+        if (data.artworks.length === 0) {
+          Alert.alert('No Results', 'No artworks found for your search. Try different keywords!');
+        }
+      } else {
+        const data: ArtworkSearchResponse = await response.json();
+        console.log('🌐 Met Museum search results:', {
+          total: data.total,
+          artworksCount: data.artworks.length,
+          aiResponse: data.aiResponse.substring(0, 100) + '...'
+        });
+        setArtworks(data.artworks);
+        setAiResponse(data.aiResponse);
+        
+        if (data.artworks.length === 0) {
+          Alert.alert('No Results', 'No artworks found for your search. Try different keywords!');
+        }
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -73,6 +99,12 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
         Alert.alert(
           'Museum API Issues', 
           'The Met Museum API is having temporary issues. Please try again in a few moments.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMessage.includes('Embedding service temporarily unavailable')) {
+        Alert.alert(
+          'AI Search Unavailable', 
+          'The AI semantic search is temporarily unavailable. Try switching to regular search.',
           [{ text: 'OK' }]
         );
       } else {
@@ -92,8 +124,12 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
     }
   };
 
-  const renderArtworkCard = ({ item }: { item: MuseumArtwork }) => (
-    <ArtworkCard artwork={item} onPress={() => onArtworkPress(item)} />
+  const renderArtworkCard = ({ item }: { item: MuseumArtwork | SemanticArtwork }) => (
+    <ArtworkCard 
+      artwork={item} 
+      onPress={() => onArtworkPress(item)} 
+      similarity={useSemanticSearch ? (item as SemanticArtwork).similarity : undefined}
+    />
   );
 
   return (
@@ -101,7 +137,9 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>🎨 Artefact AI</Text>
-        <Text style={styles.subtitle}>Discover amazing artwork with natural language</Text>
+        <Text style={styles.subtitle}>
+          {useSemanticSearch ? 'AI-powered semantic art discovery' : 'Discover amazing artwork with natural language'}
+        </Text>
         
         <View style={styles.headerButtons}>
           <TouchableOpacity 
@@ -120,38 +158,84 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
         </View>
       </View>
 
-      {/* Search Section */}
-      <View style={styles.searchSection}>
-        <Text style={styles.searchTitle}>🔍 Search Artworks</Text>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="e.g. 'cool mexican art', 'van gogh sunflowers'"
-            placeholderTextColor="#999"
-            editable={!loading}
-          />
-          <TouchableOpacity 
-            style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
-            onPress={handleSearch}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.searchButtonText}>Search</Text>
-            )}
-          </TouchableOpacity>
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
+        {/* Search Mode Toggle */}
+        <View style={styles.searchModeSection}>
+          <Text style={styles.searchModeTitle}>Search Mode:</Text>
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity 
+              style={[styles.toggleButton, useSemanticSearch && styles.toggleButtonActive]}
+              onPress={() => setUseSemanticSearch(true)}
+            >
+              <Text style={[styles.toggleText, useSemanticSearch && styles.toggleTextActive]}>
+                🧠 AI Semantic
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.toggleButton, !useSemanticSearch && styles.toggleButtonActive]}
+              onPress={() => setUseSemanticSearch(false)}
+            >
+              <Text style={[styles.toggleText, !useSemanticSearch && styles.toggleTextActive]}>
+                🌐 Met Museum
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      {/* Results Section */}
-      <View style={styles.resultsContainer}>
+        {/* Search Section */}
+        <View style={styles.searchSection}>
+          <Text style={styles.searchTitle}>🔍 Search Artworks</Text>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={useSemanticSearch 
+                ? "e.g. 'Japanese landscapes', 'golden ancient jewelry', 'melancholy portraits'"
+                : "e.g. 'cool mexican art', 'van gogh sunflowers'"
+              }
+              placeholderTextColor="#999"
+              editable={!loading}
+            />
+            <TouchableOpacity 
+              style={[styles.searchButton, loading && styles.searchButtonDisabled]} 
+              onPress={handleSearch}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.searchButtonText}>
+                  {useSemanticSearch ? '🧠 AI Search' : '🔍 Search'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* AI Response Section */}
+        {aiResponse && !loading && (
+          <View style={styles.aiResponseSection}>
+            <Text style={styles.aiResponseTitle}>🎭 Curator's Insight:</Text>
+            <Text style={styles.aiResponseText}>{aiResponse}</Text>
+          </View>
+        )}
+
+        {/* Results Section */}
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Searching for amazing artworks...</Text>
+            <Text style={styles.loadingText}>
+              {useSemanticSearch 
+                ? 'Using AI to find semantically similar artworks...' 
+                : 'Searching for amazing artworks...'
+              }
+            </Text>
           </View>
         )}
         
@@ -163,9 +247,10 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
         )}
         
         {!loading && artworks.length > 0 && (
-          <>
+          <View style={styles.resultsSection}>
             <Text style={styles.resultsTitle}>
               Found {artworks.length} artworks
+              {useSemanticSearch && ' (sorted by similarity)'}
             </Text>
             <FlatList
               data={artworks}
@@ -174,21 +259,24 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
               numColumns={2}
               columnWrapperStyle={styles.row}
               contentContainerStyle={styles.artworksList}
-              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+              nestedScrollEnabled={true}
             />
-          </>
+          </View>
         )}
         
         {!hasSearched && (
           <View style={styles.welcomeContainer}>
             <Text style={styles.welcomeText}>👋 Welcome back, {session?.user.name || 'Art Lover'}!</Text>
             <Text style={styles.welcomeSubtext}>
-              Search for artworks using natural language.{'\n'}
-              Try: "impressionist paintings", "ancient egyptian art", or "van gogh"
+              {useSemanticSearch 
+                ? 'Search for artworks using AI semantic understanding.\nTry: "serene landscapes", "ancient gold artifacts", or "vibrant impressionist paintings"'
+                : 'Search for artworks using natural language.\nTry: "impressionist paintings", "ancient egyptian art", or "van gogh"'
+              }
             </Text>
           </View>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -197,6 +285,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     backgroundColor: '#007AFF',
@@ -246,6 +340,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  searchModeSection: {
+    backgroundColor: '#fff',
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchModeTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  toggleButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  toggleText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toggleTextActive: {
+    color: '#fff',
+  },
   searchSection: {
     backgroundColor: '#fff',
     margin: 16,
@@ -293,8 +426,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  resultsContainer: {
-    flex: 1,
+  aiResponseSection: {
+    backgroundColor: '#fff',
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  aiResponseTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  aiResponseText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  resultsSection: {
     paddingHorizontal: 16,
   },
   loadingContainer: {
