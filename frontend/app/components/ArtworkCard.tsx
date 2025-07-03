@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import type { MuseumArtwork } from '../../../shared/types/index';
+import type { MuseumArtwork, SemanticArtwork } from '../../../shared/types/index';
 
 interface ArtworkCardProps {
-  artwork: MuseumArtwork;
+  artwork: MuseumArtwork | SemanticArtwork;
   onPress: () => void;
+  similarity?: number; // Optional similarity score for semantic search
 }
 
-export default function ArtworkCard({ artwork, onPress }: ArtworkCardProps) {
+export default function ArtworkCard({ artwork, onPress, similarity }: ArtworkCardProps) {
   return (
     <TouchableOpacity 
       style={styles.artworkCard} 
@@ -23,6 +24,15 @@ export default function ArtworkCard({ artwork, onPress }: ArtworkCardProps) {
       ) : (
         <View style={styles.placeholderImage}>
           <Text style={styles.placeholderText}>🖼️</Text>
+        </View>
+      )}
+      
+      {/* Similarity Badge for Semantic Search */}
+      {similarity !== undefined && (
+        <View style={styles.similarityBadge}>
+          <Text style={styles.similarityText}>
+            {Math.round(similarity * 100)}% match
+          </Text>
         </View>
       )}
       
@@ -52,6 +62,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     width: '48%',
+    position: 'relative',
   },
   artworkImage: {
     width: '100%',
@@ -71,6 +82,21 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 32,
     color: '#ccc',
+  },
+  similarityBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
+  },
+  similarityText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   artworkInfo: {
     padding: 12,
