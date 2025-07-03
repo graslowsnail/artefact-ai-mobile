@@ -105,15 +105,43 @@ class ImageCaptioner:
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **inputs, 
-                    max_length=75,
-                    num_beams=8,
-                    temperature=0.7,
+                    max_length=100,
+                    num_beams=10,
+                    temperature=0.8,
+                    repetition_penalty=1.1,
                     do_sample=True
                 )
                 
             caption = self.processor.decode(generated_ids[0], skip_special_tokens=True)
             
-            return caption.strip()
+            # Clean up the basic captions - remove common generic starters
+            generic_phrases = [
+                "there is a picture of",
+                "there is a photo of", 
+                "there is a drawing of",
+                "there is an image of",
+                "there is a",
+                "this is a picture of",
+                "this is a photo of",
+                "this is a drawing of", 
+                "this is an image of",
+                "this is a",
+                "an image of",
+                "a picture of",
+                "a photo of",
+                "a drawing of"
+            ]
+            
+            caption_clean = caption
+            for phrase in generic_phrases:
+                if caption_clean.lower().startswith(phrase):
+                    caption_clean = caption_clean[len(phrase):].strip()
+            
+            # Capitalize first letter if we cleaned something
+            if caption_clean and caption_clean != caption:
+                caption_clean = caption_clean[0].upper() + caption_clean[1:] if len(caption_clean) > 1 else caption_clean.upper()
+            
+            return caption_clean.strip()
             
         except requests.exceptions.Timeout:
             print(f"   ⏰ Timeout downloading image")
