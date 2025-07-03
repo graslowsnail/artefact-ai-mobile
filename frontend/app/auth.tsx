@@ -285,26 +285,27 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 65,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 15,
   },
   content: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 1,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#1C1C1E',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 17,
     color: '#6C6C70',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
     fontWeight: '400',
   },
   tabContainer: {
