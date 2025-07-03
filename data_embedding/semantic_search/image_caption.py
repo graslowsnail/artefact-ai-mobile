@@ -218,7 +218,7 @@ def main():
     
     try:
         captioner = ImageCaptioner()
-        captioner.process_batch(200)
+        captioner.process_batch(1000)
         
     except KeyboardInterrupt:
         print("\n\n⏹️  Process interrupted by user")
