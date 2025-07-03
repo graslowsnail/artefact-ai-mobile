@@ -58,6 +58,92 @@ Expected output:
 🚀 Ready to run: python generate_embeddings.py
 ```
 
+## 🚀 Quick Start Guide
+
+### How to Start Scripts
+
+Here's how to run each script in the pipeline:
+
+#### **Phase 1A: BLIP Image Captioning** ✅ (Already completed)
+```bash
+# Navigate to semantic_search directory
+cd artefact-ai/data_embedding/semantic_search
+
+# Activate virtual environment
+source ../venv/bin/activate
+
+# Run BLIP captioning script
+python image_caption.py
+```
+
+#### **Phase 1B: Llama3 Summary Enhancement** ✅ (Already completed)  
+```bash
+# Make sure Ollama is running with optimized Modelfile
+cd artefact-ai/data_embedding/semantic_search
+
+# Start Ollama server (in another terminal)
+ollama serve
+
+# Create the optimized model
+ollama create artefact-ai -f Modelfile
+
+# Run the enhancement script
+python embedding_summary_enhancer.py
+```
+
+#### **Phase 1C: OpenAI Embeddings** 🚀 (Current Phase)
+```bash
+# Navigate to semantic_search directory  
+cd artefact-ai/data_embedding/semantic_search
+
+# Activate virtual environment
+source ../venv/bin/activate
+
+# Test setup first
+python test_embeddings_setup.py
+
+# Run embeddings generation
+python generate_embeddings.py
+```
+
+#### **Utility Scripts**
+```bash
+# Convert JSON to CSV (if needed)
+cd artefact-ai/data_embedding/data_scripts
+python json_to_csv.py
+
+# Filter images (if needed)
+python filter_images.py
+```
+
+### Essential Prerequisites
+
+1. **Virtual Environment Setup**
+```bash
+cd artefact-ai/data_embedding
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. **Environment Variables** (in `backend/.env`)
+```bash
+OPENAI_API_KEY=sk-your-openai-api-key-here
+DATABASE_URL=your-postgresql-connection-string
+```
+
+3. **Ollama Setup** (for Phase 1B)
+```bash
+# Install Ollama
+brew install ollama
+
+# Start server
+ollama serve
+
+# Pull Llama3
+ollama pull llama3
+```
+
 ## 🚀 Execution
 
 ### Run Phase 1C
@@ -65,60 +151,6 @@ Expected output:
 ```bash
 cd semantic_search
 python generate_embeddings.py
-```
-
-### Expected Output
-
-```
-🧠 Initializing OpenAI Embeddings Generator...
-==================================================
-✅ OpenAI client initialized
-🤖 Model: text-embedding-3-large
-📐 Dimensions: 1536
-🗄️ Database connection configured
-
-🔍 Testing OpenAI connection...
-✅ OpenAI connection successful
-📊 Test embedding length: 1536 dimensions
-
-🔍 Finding artworks that need embeddings...
-📊 Found 164 artworks ready for embedding
-
-🚀 Starting OpenAI Embeddings Generation
-==================================================
-
-📝 Processing 164 artworks...
-🎯 Target: 1536-dimensional vectors
-🤖 Model: text-embedding-3-large
-
-[  1/164] Processing: Porcelain bread plate with Townley family coat-o...
-   📄 Object ID: 12345
-   ✅ Embedding saved (1536 dimensions)
-
-[  2/164] Processing: Chinese export porcelain teacup with floral deco...
-   📄 Object ID: 12346
-   ✅ Embedding saved (1536 dimensions)
-
-...
-
-📊 Progress: 164/164 (100.0%)
-✅ Succeeded: 164 | ❌ Failed: 0
-⚡ Rate: 2.1 embeddings/sec | ⏱️ ETA: 0.0 min
-
-🎉 EMBEDDING GENERATION COMPLETE!
-==================================================
-📊 Total processed: 164
-✅ Successful: 164
-❌ Failed: 0
-📈 Success rate: 100.0%
-⏱️ Total time: 2.3 minutes
-⚡ Average rate: 1.2 embeddings/sec
-
-🎯 SUCCESS: Generated 164 embeddings!
-🔍 Vector database is now ready for semantic search
-➡️ Next: Phase 2 - Implement semantic search API endpoints
-
-✨ Phase 1C completed with 100% success rate!
 ```
 
 ## 📊 Performance Specifications
