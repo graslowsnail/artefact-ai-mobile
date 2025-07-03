@@ -4,7 +4,7 @@ import { generateText } from 'ai';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { updateArtworkImages, getExistingObjectIds, getArtworksByObjectIds, getArtworksNeedingImages } from '../controllers/artworkController.js';
-import type { MuseumArtwork, ArtworkSearchRequest, ArtworkSearchResponse } from '@shared/types/index.js';
+import type { MuseumArtwork, ArtworkSearchRequest, ArtworkSearchResponse, SemanticSearchRequest, SemanticSearchResponse } from '@shared/types/index.js';
 
 const router = Router();
 
@@ -23,6 +23,21 @@ interface METObjectResponse {
     medium: string;
     primaryImage: string;
     department: string;
+}
+
+// OpenAI API response types
+interface OpenAIEmbeddingResponse {
+    data: Array<{
+        embedding: number[];
+        index: number;
+        object: string;
+    }>;
+    model: string;
+    object: string;
+    usage: {
+        prompt_tokens: number;
+        total_tokens: number;
+    };
 }
 
 async function searchMET(query: string) {
@@ -230,6 +245,168 @@ router.post('/search', async (req, res) => {
         } else {
             res.status(500).json({ 
                 error: 'Internal server error during artwork search',
+                message: 'Something went wrong while searching for artworks. Please try again.'
+            });
+        }
+    }
+});
+
+// POST /api/artwork/semantic-search - NEW VECTOR SEARCH ENDPOINT
+router.post('/semantic-search', async (req, res) => {
+    try {
+        const { query, limit = 20 }: SemanticSearchRequest = req.body;
+
+        if (!query || typeof query !== 'string') {
+            return res.status(400).json({ 
+                error: 'Query is required and must be a string' 
+            });
+        }
+
+        console.log("🔍 Semantic search request:", query);
+
+        // Step 1: Process query with AI to clean/enhance it
+        const messages = [{ role: "user" as const, content: query }];
+
+        const queryProcessing = await generateText({
+            model: openai("gpt-4o-mini"), // Using faster model for query processing
+            system: `
+                You are a virtual museum curator processing search queries.
+                Clean and enhance the user's query for semantic search:
+                • Keep artistic, cultural, and temporal terms (e.g., "Renaissance", "Japanese", "bronze sculpture")
+                • Remove filler words ("please", "show me", "I want to see")
+                • Expand vague terms with relevant art concepts
+                • If user mentions a culture/period, add related art terms
+                • Return a clean, descriptive query suitable for semantic matching
+                
+                Examples:
+                "Show me some Japanese art" → "Japanese art painting calligraphy woodblock print traditional"
+                "I want Renaissance paintings" → "Renaissance painting Italian art fresco oil painting classical"
+                "Egyptian stuff" → "Egyptian art sculpture hieroglyphics papyrus ancient artifacts"
+            `,
+            messages,
+        });
+
+        const processedQuery = queryProcessing.text.trim();
+        console.log("🤖 Processed query:", processedQuery);
+
+        // Step 2: Generate embedding for the processed query
+        const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                input: processedQuery,
+                model: 'text-embedding-3-large',
+                dimensions: 1536
+            }),
+        });
+
+        if (!embeddingResponse.ok) {
+            throw new Error(`OpenAI embedding failed: ${embeddingResponse.status}`);
+        }
+
+        const embeddingData = await embeddingResponse.json() as OpenAIEmbeddingResponse;
+        const queryEmbedding = embeddingData.data[0].embedding;
+        
+        console.log("🧠 Generated query embedding:", queryEmbedding.length, "dimensions");
+
+        // Step 3: Vector similarity search using pgvector
+        const { db } = await import('../db/index.js');
+        const { artwork } = await import('../db/schema.js');
+        const { sql } = await import('drizzle-orm');
+
+        const similarArtworks = await db
+            .select({
+                id: artwork.id,
+                object_id: artwork.object_id,
+                title: artwork.title,
+                artist: artwork.artist,
+                date: artwork.date,
+                medium: artwork.medium,
+                primary_image: artwork.primary_image,
+                primary_image_small: artwork.primary_image_small,
+                department: artwork.department,
+                culture: artwork.culture,
+                classification: artwork.classification,
+                artist_nationality: artwork.artist_nationality,
+                description: artwork.description,
+                embedding_summary: artwork.embedding_summary,
+                similarity: sql<number>`1 - (${artwork.embedding} <=> ${JSON.stringify(queryEmbedding)}::vector)`.as('similarity')
+            })
+            .from(artwork)
+            .where(sql`${artwork.embedding} IS NOT NULL`)
+            .orderBy(sql`${artwork.embedding} <=> ${JSON.stringify(queryEmbedding)}::vector`)
+            .limit(Math.min(limit, 50)); // Cap at 50 results
+
+        console.log("🎨 Found", similarArtworks.length, "similar artworks");
+
+        // Step 4: Format results and generate AI response
+        const aiResponse = await generateText({
+            model: openai("gpt-4o-mini"),
+            system: `
+                You are a museum curator presenting search results to visitors.
+                Based on the search query and results, provide a brief, engaging response.
+                • Mention what type of artworks were found
+                • Highlight interesting patterns or themes
+                • Keep it conversational and informative
+                • Don't list individual artworks (the frontend will display them)
+            `,
+            messages: [
+                {
+                    role: "user",
+                    content: `Query: "${query}"\nProcessed: "${processedQuery}"\nFound ${similarArtworks.length} similar artworks`
+                }
+            ],
+        });
+
+        const response: SemanticSearchResponse = {
+            aiResponse: aiResponse.text,
+            query: processedQuery,
+            artworks: similarArtworks.map(artwork => ({
+                id: artwork.id,
+                object_id: artwork.object_id,
+                title: artwork.title,
+                artist: artwork.artist || '',
+                date: artwork.date || '',
+                medium: artwork.medium || '',
+                primary_image: artwork.primary_image,
+                primary_image_small: artwork.primary_image_small,
+                department: artwork.department || '',
+                culture: artwork.culture,
+                created_at: '',
+                additional_images: '',
+                object_url: '',
+                is_highlight: false,
+                artist_display_bio: '',
+                object_begin_date: '',
+                object_end_date: '',
+                credit_line: '',
+                classification: artwork.classification || '',
+                artist_nationality: artwork.artist_nationality || '',
+                description: artwork.description,
+                embedding_summary: artwork.embedding_summary,
+                similarity: artwork.similarity
+            })),
+            total: similarArtworks.length,
+        };
+
+        console.log(`✅ Semantic search completed: ${response.artworks.length} artworks returned`);
+        res.json(response);
+
+    } catch (error) {
+        console.error("❌ Semantic search error:", error);
+        
+        if (error instanceof Error && error.message.includes('OpenAI embedding failed')) {
+            res.status(503).json({ 
+                error: 'Embedding service temporarily unavailable',
+                message: 'The AI embedding service is experiencing issues. Please try again in a few moments.',
+                details: error.message
+            });
+        } else {
+            res.status(500).json({ 
+                error: 'Internal server error during semantic search',
                 message: 'Something went wrong while searching for artworks. Please try again.'
             });
         }
