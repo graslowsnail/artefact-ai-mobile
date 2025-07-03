@@ -1,9 +1,10 @@
 import { createAuthClient } from "better-auth/react";
 import { expoClient } from "@better-auth/expo/client";
 import * as SecureStore from "expo-secure-store";
+import { API_BASE_URL } from "../config/api";
 
 export const authClient = createAuthClient({
-  baseURL: "http://localhost:3000", // Your backend URL
+  baseURL: API_BASE_URL, // Smart environment-based URL
   plugins: [
     expoClient({
       scheme: "artefact-ai", // Your app scheme for deep linking

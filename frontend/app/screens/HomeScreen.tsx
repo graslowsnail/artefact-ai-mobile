@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert, FlatList, A
 import { useSession } from '../../lib/auth-client';
 import type { MuseumArtwork, ArtworkSearchResponse, SemanticSearchResponse, SemanticArtwork } from '../../../shared/types/index';
 import ArtworkCard from '../components/ArtworkCard';
+import { API_BASE_URL } from '../../config/api';
 
 interface HomeScreenProps {
   onArtworkPress: (artwork: MuseumArtwork) => void;
@@ -45,7 +46,7 @@ export default function HomeScreen({ onArtworkPress, onVaultPress, onSignOut }: 
       setHasSearched(true);
       
       const endpoint = useSemanticSearch ? '/semantic-search' : '/search';
-      const response = await fetch(`http://localhost:3000/api/artwork${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}/api/artwork${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

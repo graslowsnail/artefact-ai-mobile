@@ -19,7 +19,7 @@
     "better-auth": "^1.2.12",
     "expo": "~53.0.13",
     "expo-blur": "~14.1.5",
-    "expo-constants": "~17.1.6",
+    "expo-constants": "^17.1.7",
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.3.0",
