@@ -21,7 +21,7 @@ class EmbeddingSummaryEnhancer:
         
         # Ollama configuration  
         self.ollama_url = "http://localhost:11434/api/generate"
-        self.model_name = "llama3-beast"  # BEAST MODE ACTIVATED
+        self.model_name = "artefact-ai"  # Updated to match the Modelfile
         
         # Database connection
         self.db_url = os.getenv('DATABASE_URL')
@@ -55,25 +55,39 @@ class EmbeddingSummaryEnhancer:
         except requests.exceptions.Timeout:
             raise Exception("❌ Ollama connection timeout. Is the service running?")
     
-    def get_artworks_to_enhance(self, limit: int = 200) -> List[Dict]:
+    def get_artworks_to_enhance(self, limit: int = None) -> List[Dict]:
         """Get artworks that need embedding summaries"""
-        print(f"\n🔍 Finding artworks that need embedding summaries (limit: {limit})...")
+        if limit:
+            print(f"\n🔍 Finding artworks that need embedding summaries (limit: {limit})...")
+        else:
+            print(f"\n🔍 Finding ALL artworks that need embedding summaries...")
         
         conn = psycopg2.connect(self.db_url)
         cur = conn.cursor()
         
         try:
             # Select artworks with captions but no embedding summaries
-            cur.execute("""
-                SELECT id, object_id, title, artist, date, medium, culture, 
-                      description, image_caption, department, credit_line
-                FROM artwork 
-                WHERE image_caption IS NOT NULL 
-                AND image_caption != '' 
-                AND embedding_summary IS NULL
-                ORDER BY object_id
-                LIMIT %s
-            """, (limit,))
+            if limit:
+                cur.execute("""
+                    SELECT id, object_id, title, artist, date, medium, culture, 
+                          description, image_caption, department, credit_line
+                    FROM artwork 
+                    WHERE image_caption IS NOT NULL 
+                    AND image_caption != '' 
+                    AND embedding_summary IS NULL
+                    ORDER BY object_id
+                    LIMIT %s
+                """, (limit,))
+            else:
+                cur.execute("""
+                    SELECT id, object_id, title, artist, date, medium, culture, 
+                          description, image_caption, department, credit_line
+                    FROM artwork 
+                    WHERE image_caption IS NOT NULL 
+                    AND image_caption != '' 
+                    AND embedding_summary IS NULL
+                    ORDER BY object_id
+                """)
             
             artworks = cur.fetchall()
             
@@ -224,7 +238,7 @@ Create a museum-quality description:"""
             print(f"   💾 Database error: {str(e)[:50]}...")
             return False
     
-    def process_batch(self, limit: int = 200):
+    def process_batch(self, limit: int = None):
         """Main processing function"""
         print(f"\n🎨 Starting Embedding Summary Enhancement")
         print("=" * 60)
@@ -299,7 +313,7 @@ def main():
     
     try:
         enhancer = EmbeddingSummaryEnhancer()
-        enhancer.process_batch(200)
+        enhancer.process_batch()  # No limit - process ALL records
         
     except KeyboardInterrupt:
         print("\n\n⏹️  Process interrupted by user")

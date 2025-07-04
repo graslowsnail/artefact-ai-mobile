@@ -96,7 +96,7 @@ export const artwork = pgTable("artwork", {
   primary_image_small: text("primary_image_small"),
   image_caption: text("image_caption"),
   embedding_summary: text("embedding_summary"),
-  embedding: vector("embedding", { dimensions: 1536 }),
+  embedding: vector("embedding", { dimensions: 3072 }),
   processed_at: timestamp("processed_at"),
 });
 
