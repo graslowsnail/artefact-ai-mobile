@@ -29,14 +29,12 @@ export interface SemanticArtwork extends MuseumArtwork {
 }
 
 export interface ArtworkSearchResponse {
-  aiResponse: string;
   artworks: MuseumArtwork[];
   total: number;
 }
 
 // Semantic search response includes processed query
 export interface SemanticSearchResponse {
-  aiResponse: string;
   query: string; // The processed/cleaned query used for embedding
   artworks: SemanticArtwork[];
   total: number;

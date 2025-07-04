@@ -40,8 +40,22 @@ interface OpenAIEmbeddingResponse {
     };
 }
 
+// Rate limiting for MET API
+let lastMETApiCall = 0;
+const MET_API_DELAY = 2000; // 2 seconds between calls
+
 async function searchMET(query: string) {
     console.log("🔍 Searching MET for:", query);
+
+    // Rate limiting: ensure at least 2 seconds between MET API calls
+    const now = Date.now();
+    const timeSinceLastCall = now - lastMETApiCall;
+    if (timeSinceLastCall < MET_API_DELAY) {
+        const waitTime = MET_API_DELAY - timeSinceLastCall;
+        console.log(`⏸️  Rate limiting: waiting ${waitTime}ms before MET API call`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    lastMETApiCall = Date.now();
 
     const baseUrl = "https://collectionapi.metmuseum.org/public/collection/v1/search";
     const searchParams = new URLSearchParams();
@@ -51,11 +65,22 @@ async function searchMET(query: string) {
 
     console.log("FETCHING ARTWORK FROM", `${baseUrl}?${searchParams}`);
 
-    const response = await fetch(`${baseUrl}?${searchParams}`);
+    const response = await fetch(`${baseUrl}?${searchParams}`, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+    });
     
     // Check if the response is OK and contains JSON
     if (!response.ok) {
         console.error(`❌ MET API error: ${response.status} ${response.statusText}`);
+        
+        // If rate limited, wait longer before next call
+        if (response.status === 403 || response.status === 429) {
+            console.log(`⏸️  Rate limited! Waiting 10 seconds before next call...`);
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+        
         throw new Error(`MET API returned ${response.status}: ${response.statusText}`);
     }
     
@@ -64,6 +89,13 @@ async function searchMET(query: string) {
         console.error(`❌ MET API returned non-JSON response: ${contentType}`);
         const text = await response.text();
         console.error("Response preview:", text.substring(0, 200));
+        
+        // Check if this looks like a rate limiting/bot protection page
+        if (text.includes('ROBOTS') || text.includes('NOINDEX') || text.includes('blocked')) {
+            console.log(`⏸️  Detected bot protection! Waiting 30 seconds before next call...`);
+            await new Promise(resolve => setTimeout(resolve, 30000));
+        }
+        
         throw new Error('MET API returned non-JSON response (possibly rate limited or down)');
     }
 
@@ -93,13 +125,28 @@ async function searchMET(query: string) {
         
         const imagePromises = objectsNeedingImages.map(async (id: number) => {
             try {
+                // Rate limiting for individual object requests
+                await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay between object requests
+                
                 const objResponse = await fetch(
                     `https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`,
+                    {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                        }
+                    }
                 );
                 
                 // Check if individual object response is valid JSON
                 if (!objResponse.ok) {
                     console.error(`❌ MET object API error for ${id}: ${objResponse.status}`);
+                    
+                    // If rate limited, wait longer
+                    if (objResponse.status === 403 || objResponse.status === 429) {
+                        console.log(`⏸️  Object API rate limited for ${id}! Waiting 5 seconds...`);
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    }
+                    
                     return null;
                 }
                 
@@ -224,7 +271,6 @@ router.post('/search', async (req, res) => {
         const toolResults = result.toolResults?.[0]?.result;
 
         const response: ArtworkSearchResponse = {
-            aiResponse: result.text,
             artworks: (toolResults?.artworks || []) as MuseumArtwork[],
             total: toolResults?.total || 0,
         };
@@ -299,7 +345,7 @@ router.post('/semantic-search', async (req, res) => {
             body: JSON.stringify({
                 input: processedQuery,
                 model: 'text-embedding-3-large',
-                dimensions: 1536
+                dimensions: 3072
             }),
         });
 
@@ -342,27 +388,9 @@ router.post('/semantic-search', async (req, res) => {
 
         console.log("🎨 Found", similarArtworks.length, "similar artworks");
 
-        // Step 4: Format results and generate AI response
-        const aiResponse = await generateText({
-            model: openai("gpt-4o-mini"),
-            system: `
-                You are a museum curator presenting search results to visitors.
-                Based on the search query and results, provide a brief, engaging response.
-                • Mention what type of artworks were found
-                • Highlight interesting patterns or themes
-                • Keep it conversational and informative
-                • Don't list individual artworks (the frontend will display them)
-            `,
-            messages: [
-                {
-                    role: "user",
-                    content: `Query: "${query}"\nProcessed: "${processedQuery}"\nFound ${similarArtworks.length} similar artworks`
-                }
-            ],
-        });
+        // Step 4: Format results
 
         const response: SemanticSearchResponse = {
-            aiResponse: aiResponse.text,
             query: processedQuery,
             artworks: similarArtworks.map(artwork => ({
                 id: artwork.id,

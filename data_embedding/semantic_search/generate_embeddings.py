@@ -29,7 +29,7 @@ class OpenAIEmbeddingsGenerator:
         # Initialize OpenAI client
         self.client = openai.OpenAI(api_key=self.openai_api_key)
         self.model_name = "text-embedding-3-large"
-        self.embedding_dimensions = 1536
+        self.embedding_dimensions = 3072  # Upgraded to 3072 for better performance
         
         # Database connection
         self.db_url = os.getenv('DATABASE_URL')
