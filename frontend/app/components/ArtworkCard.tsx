@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import type { MuseumArtwork, SemanticArtwork } from '../../../shared/types/index';
 
@@ -9,17 +9,23 @@ interface ArtworkCardProps {
 }
 
 export default function ArtworkCard({ artwork, onPress, similarity }: ArtworkCardProps) {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <TouchableOpacity 
       style={styles.artworkCard} 
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {artwork.primary_image ? (
+      {artwork.primary_image && !imageError ? (
         <Image 
-          source={{ uri: artwork.primary_image }} 
+          source={{ uri: artwork.primary_image }}
           style={styles.artworkImage}
           resizeMode="cover"
+          onError={() => {
+            console.log('❌ Image failed to load:', artwork.primary_image);
+            setImageError(true);
+          }}
         />
       ) : (
         <View style={styles.placeholderImage}>
