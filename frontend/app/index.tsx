@@ -78,7 +78,6 @@ export default function AppNavigator() {
 
   const handleFavoriteChange = (artwork: MuseumArtwork, isFavorited: boolean) => {
     // This can be used to update UI state across screens if needed
-    console.log(`Artwork ${artwork.object_id} ${isFavorited ? 'added to' : 'removed from'} vault`);
   };
 
   // Show auth screen if not signed in

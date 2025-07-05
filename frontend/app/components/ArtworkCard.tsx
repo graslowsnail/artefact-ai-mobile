@@ -23,7 +23,6 @@ export default function ArtworkCard({ artwork, onPress, similarity }: ArtworkCar
           style={styles.artworkImage}
           resizeMode="cover"
           onError={() => {
-            console.log('❌ Image failed to load:', artwork.primary_image);
             setImageError(true);
           }}
         />

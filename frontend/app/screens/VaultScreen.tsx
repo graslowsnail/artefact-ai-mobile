@@ -102,9 +102,9 @@ export default function VaultScreen({ onBack, onArtworkPress }: VaultScreenProps
               <Text style={styles.backButtonText}>← Back</Text>
             </TouchableOpacity>
             
-            <Text style={styles.title}>🔐 My Vault</Text>
+            <Text style={styles.title}>My Vault</Text>
             
-            <View style={styles.backButton} />
+            <View style={[styles.backButton, { opacity: 0 }]} />
           </View>
           
           <Text style={styles.subtitle}>
