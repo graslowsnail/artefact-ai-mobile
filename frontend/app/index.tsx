@@ -12,6 +12,7 @@ type Screen = 'home' | 'artwork-detail' | 'vault';
 export default function AppNavigator() {
   const { data: session } = useSession();
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [previousScreen, setPreviousScreen] = useState<Screen>('home');
   const [selectedArtwork, setSelectedArtwork] = useState<MuseumArtwork | null>(null);
 
   // Lifted search state
@@ -28,17 +29,25 @@ export default function AppNavigator() {
 
   // Navigation handlers
   const navigateToHome = () => {
+    setPreviousScreen(currentScreen);
     setCurrentScreen('home');
     setSelectedArtwork(null);
   };
 
   const navigateToArtworkDetail = (artwork: MuseumArtwork) => {
+    setPreviousScreen(currentScreen);
     setSelectedArtwork(artwork);
     setCurrentScreen('artwork-detail');
   };
 
   const navigateToVault = async () => {
+    setPreviousScreen(currentScreen);
     setCurrentScreen('vault');
+  };
+
+  const navigateBack = () => {
+    setSelectedArtwork(null);
+    setCurrentScreen(previousScreen);
   };
 
   const handleSignOut = async () => {
@@ -69,7 +78,6 @@ export default function AppNavigator() {
 
   const handleFavoriteChange = (artwork: MuseumArtwork, isFavorited: boolean) => {
     // This can be used to update UI state across screens if needed
-    console.log(`Artwork ${artwork.object_id} ${isFavorited ? 'added to' : 'removed from'} vault`);
   };
 
   // Show auth screen if not signed in
@@ -96,7 +104,7 @@ export default function AppNavigator() {
       return (
         <ArtworkDetailScreen 
           artwork={selectedArtwork}
-          onBack={navigateToHome}
+          onBack={navigateBack}
           onFavoriteChange={handleFavoriteChange}
         />
       );
