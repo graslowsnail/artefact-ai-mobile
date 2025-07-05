@@ -549,9 +549,9 @@ export default function HomeScreen({
                         (useSemanticSearch && aiSearchLoading) ||
                         (!useSemanticSearch && museumSearchLoading)
                     ) &&
-                        ((useSemanticSearch && aiSearchResults.length === 0) ||
+                        ((useSemanticSearch && aiSearchResults.length === 0 && aiHasSearched) ||
                             (!useSemanticSearch &&
-                                museumSearchResults.length === 0)) && (
+                                museumSearchResults.length === 0 && museumHasSearched)) && (
                             <GlassCard style={styles.centeredContainer}>
                                 <Text style={styles.noResultsText}>
                                     No artworks found

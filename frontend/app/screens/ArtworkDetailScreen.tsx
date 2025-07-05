@@ -14,6 +14,7 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
   const { data: session } = useSession();
   const [isFavorited, setIsFavorited] = useState(false);
   const [loadingFavorite, setLoadingFavorite] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Check if artwork is favorited when screen loads
   useEffect(() => {
@@ -133,11 +134,15 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Artwork Image */}
         <View style={styles.imageContainer}>
-          {artwork.primary_image ? (
+          {artwork.primary_image && !imageError ? (
             <Image 
-              source={{ uri: artwork.primary_image }} 
+              source={{ uri: artwork.primary_image }}
               style={styles.image}
               resizeMode="contain"
+              onError={() => {
+                console.log('❌ Detail image failed to load:', artwork.primary_image);
+                setImageError(true);
+              }}
             />
           ) : (
             <View style={styles.placeholder}>
@@ -201,91 +206,144 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  contentOverlay: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f8f9fa',
+    paddingTop: 55,
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    backgroundColor: 'rgba(180, 180, 180, 0.6)',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-    paddingTop: 60,
+    borderBottomColor: 'rgba(150, 150, 150, 0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   backButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#e9ecef',
-    borderRadius: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.3)',
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#495057',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#1C1C1E',
+    fontWeight: '600',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   favoriteButton: {
+    backgroundColor: 'rgba(255, 215, 0, 0.95)',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#ffeaa7',
-    borderRadius: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   favoriteButtonActive: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: 'rgba(220, 38, 38, 0.95)',
+    shadowColor: '#DC2626',
   },
   favoriteButtonLoading: {
     opacity: 0.6,
   },
   favoriteButtonText: {
-    fontSize: 14,
-    color: '#e17055',
-    fontWeight: '500',
+    fontSize: 12,
+    color: '#1C1C1E',
+    fontWeight: '600',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   favoriteButtonActiveText: {
-    color: '#fff',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   imageContainer: {
-    height: 300,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 16,
+    width: '100%',
+    height: 280,
     borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+    marginBottom: 20,
   },
   image: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
   },
   placeholder: {
     alignItems: 'center',
     justifyContent: 'center',
+    height: 280,
   },
   placeholderText: {
     fontSize: 48,
-    color: '#adb5bd',
+    color: '#6C6C70',
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   placeholderSubtext: {
     fontSize: 16,
-    color: '#6c757d',
+    color: '#6C6C70',
     marginTop: 8,
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   info: {
-    flex: 1,
-    padding: 16,
+    paddingHorizontal: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#212529',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1C1C1E',
     marginBottom: 8,
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   artist: {
-    fontSize: 18,
-    color: '#6c757d',
+    fontSize: 20,
+    color: '#6C6C70',
     fontStyle: 'italic',
     marginBottom: 24,
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   metadata: {
     marginBottom: 24,
@@ -297,27 +355,41 @@ const styles = StyleSheet.create({
   metadataLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#495057',
+    color: '#1C1C1E',
     width: 80,
     marginRight: 12,
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   metadataValue: {
     fontSize: 16,
-    color: '#212529',
+    color: '#6C6C70',
     flex: 1,
     flexWrap: 'wrap',
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   museumButton: {
-    backgroundColor: '#4a90e2',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    backgroundColor: 'rgba(167, 139, 250, 1)',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#a78bfa',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   museumButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
 }); 
