@@ -131,7 +131,7 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
         {/* Artwork Image */}
         <View style={styles.imageContainer}>
           {artwork.primary_image && !imageError ? (
@@ -287,21 +287,25 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    paddingTop: 20,
   },
   scrollContent: {
     paddingBottom: 20,
   },
   imageContainer: {
-    width: '100%',
     height: 280,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#f0f0f0',
     marginBottom: 20,
+    marginHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',
     height: '100%',
+    alignSelf: 'center',
   },
   placeholder: {
     alignItems: 'center',
