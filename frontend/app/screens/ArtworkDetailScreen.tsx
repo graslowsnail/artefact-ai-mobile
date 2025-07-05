@@ -140,7 +140,6 @@ export default function ArtworkDetailScreen({ artwork, onBack, onFavoriteChange 
               style={styles.image}
               resizeMode="contain"
               onError={() => {
-                console.log('❌ Detail image failed to load:', artwork.primary_image);
                 setImageError(true);
               }}
             />

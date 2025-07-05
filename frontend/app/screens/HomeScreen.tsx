@@ -37,34 +37,63 @@ interface HomeScreenProps {
     onArtworkPress: (artwork: MuseumArtwork) => void;
     onVaultPress: () => void;
     onSignOut: () => void;
+    // Search state props
+    searchQuery: string;
+    setSearchQuery: (query: string) => void;
+    aiSearchResults: SemanticArtwork[];
+    setAiSearchResults: (results: SemanticArtwork[]) => void;
+    aiSearchLoading: boolean;
+    setAiSearchLoading: (loading: boolean) => void;
+    aiSearchError: string | null;
+    setAiSearchError: (error: string | null) => void;
+    aiHasSearched: boolean;
+    setAiHasSearched: (hasSearched: boolean) => void;
+    museumSearchResults: MuseumArtwork[];
+    setMuseumSearchResults: (results: MuseumArtwork[]) => void;
+    museumSearchLoading: boolean;
+    setMuseumSearchLoading: (loading: boolean) => void;
+    museumSearchError: string | null;
+    setMuseumSearchError: (error: string | null) => void;
+    museumHasSearched: boolean;
+    setMuseumHasSearched: (hasSearched: boolean) => void;
+    useSemanticSearch: boolean;
+    setUseSemanticSearch: (useSemanticSearch: boolean) => void;
 }
 
 export default function HomeScreen({
     onArtworkPress,
     onVaultPress,
     onSignOut,
+    // Search state props
+    searchQuery,
+    setSearchQuery,
+    aiSearchResults,
+    setAiSearchResults,
+    aiSearchLoading,
+    setAiSearchLoading,
+    aiSearchError,
+    setAiSearchError,
+    aiHasSearched,
+    setAiHasSearched,
+    museumSearchResults,
+    setMuseumSearchResults,
+    museumSearchLoading,
+    setMuseumSearchLoading,
+    museumSearchError,
+    setMuseumSearchError,
+    museumHasSearched,
+    setMuseumHasSearched,
+    useSemanticSearch,
+    setUseSemanticSearch,
 }: HomeScreenProps) {
     const { data: session } = useSession();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [aiSearchResults, setAiSearchResults] = useState<SemanticArtwork[]>(
-        []
-    );
-    const [aiSearchLoading, setAiSearchLoading] = useState(false);
-    const [aiSearchError, setAiSearchError] = useState<string | null>(null);
-    const [aiHasSearched, setAiHasSearched] = useState(false);
-
-    const [museumSearchResults, setMuseumSearchResults] = useState<
-        MuseumArtwork[]
-    >([]);
-    const [museumSearchLoading, setMuseumSearchLoading] = useState(false);
-    const [museumSearchError, setMuseumSearchError] = useState<string | null>(
-        null
-    );
-    const [museumHasSearched, setMuseumHasSearched] = useState(false);
-
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    
+    // Remove all the local search state - now comes from props
+    // const [searchQuery, setSearchQuery] = useState("");
+    // const [aiSearchResults, setAiSearchResults] = useState<SemanticArtwork[]>([]);
+    // ... etc
+    
     const [loadingVault, setLoadingVault] = useState(false);
-    const [useSemanticSearch, setUseSemanticSearch] = useState(true); // Default to semantic search
     const [refreshing, setRefreshing] = useState(false);
     const [pullProgress, setPullProgress] = useState(0);
     const [lastHapticThreshold, setLastHapticThreshold] = useState(0);
@@ -73,24 +102,6 @@ export default function HomeScreen({
     const [keyboardHeight, setKeyboardHeight] = useState(0);
     const insets = useSafeAreaInsets();
     const bottomPosition = useRef(new Animated.Value(0)).current;
-
-    // Reset search state when user changes
-    useEffect(() => {
-        if (session?.user?.id !== currentUserId) {
-            console.log("🔄 User changed, resetting search state");
-            setSearchQuery("");
-            setAiSearchResults([]);
-            setAiSearchLoading(false);
-            setAiSearchError(null);
-            setAiHasSearched(false);
-            setMuseumSearchResults([]);
-            setMuseumSearchLoading(false);
-            setMuseumSearchError(null);
-            setMuseumHasSearched(false);
-            setCurrentUserId(session?.user?.id || null);
-            setUseSemanticSearch(true); // Reset to default AI search for new user
-        }
-    }, [session?.user?.id, currentUserId]);
 
     // Keyboard height tracking with smooth animation
     useEffect(() => {
@@ -179,11 +190,6 @@ export default function HomeScreen({
 
             if (useSemanticSearch) {
                 const data: SemanticSearchResponse = await response.json();
-                console.log("🔍 Semantic search results:", {
-                    total: data.total,
-                    artworksCount: data.artworks.length,
-                    query: data.query,
-                });
                 setAiSearchResults(data.artworks);
 
                 if (data.artworks.length === 0) {

@@ -5,7 +5,7 @@ import AuthScreen from './auth';
 import HomeScreen from './screens/HomeScreen';
 import ArtworkDetailScreen from './screens/ArtworkDetailScreen';
 import VaultScreen from './screens/VaultScreen';
-import type { MuseumArtwork } from '../../shared/types/index';
+import type { MuseumArtwork, SemanticArtwork } from '../../shared/types/index';
 
 type Screen = 'home' | 'artwork-detail' | 'vault';
 
@@ -13,6 +13,18 @@ export default function AppNavigator() {
   const { data: session } = useSession();
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [selectedArtwork, setSelectedArtwork] = useState<MuseumArtwork | null>(null);
+
+  // Lifted search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [aiSearchResults, setAiSearchResults] = useState<SemanticArtwork[]>([]);
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
+  const [aiSearchError, setAiSearchError] = useState<string | null>(null);
+  const [aiHasSearched, setAiHasSearched] = useState(false);
+  const [museumSearchResults, setMuseumSearchResults] = useState<MuseumArtwork[]>([]);
+  const [museumSearchLoading, setMuseumSearchLoading] = useState(false);
+  const [museumSearchError, setMuseumSearchError] = useState<string | null>(null);
+  const [museumHasSearched, setMuseumHasSearched] = useState(false);
+  const [useSemanticSearch, setUseSemanticSearch] = useState(true);
 
   // Navigation handlers
   const navigateToHome = () => {
@@ -34,6 +46,18 @@ export default function AppNavigator() {
       // Reset navigation state
       setCurrentScreen('home');
       setSelectedArtwork(null);
+      
+      // Reset search state on sign out
+      setSearchQuery("");
+      setAiSearchResults([]);
+      setAiSearchLoading(false);
+      setAiSearchError(null);
+      setAiHasSearched(false);
+      setMuseumSearchResults([]);
+      setMuseumSearchLoading(false);
+      setMuseumSearchError(null);
+      setMuseumHasSearched(false);
+      setUseSemanticSearch(true);
       
       await signOut();
       Alert.alert('Success', 'Signed out successfully!');
@@ -84,6 +108,27 @@ export default function AppNavigator() {
           onArtworkPress={navigateToArtworkDetail}
           onVaultPress={navigateToVault}
           onSignOut={handleSignOut}
+          // Pass search state and handlers
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          aiSearchResults={aiSearchResults}
+          setAiSearchResults={setAiSearchResults}
+          aiSearchLoading={aiSearchLoading}
+          setAiSearchLoading={setAiSearchLoading}
+          aiSearchError={aiSearchError}
+          setAiSearchError={setAiSearchError}
+          aiHasSearched={aiHasSearched}
+          setAiHasSearched={setAiHasSearched}
+          museumSearchResults={museumSearchResults}
+          setMuseumSearchResults={setMuseumSearchResults}
+          museumSearchLoading={museumSearchLoading}
+          setMuseumSearchLoading={setMuseumSearchLoading}
+          museumSearchError={museumSearchError}
+          setMuseumSearchError={setMuseumSearchError}
+          museumHasSearched={museumHasSearched}
+          setMuseumHasSearched={setMuseumHasSearched}
+          useSemanticSearch={useSemanticSearch}
+          setUseSemanticSearch={setUseSemanticSearch}
         />
       );
   }
