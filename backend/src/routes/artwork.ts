@@ -14,16 +14,7 @@ interface METSearchResponse {
     objectIDs: number[] | null;
 }
 
-interface METObjectResponse {
-    objectID: number;
-    title: string;
-    artistDisplayName: string;
-    culture: string;
-    objectDate: string;
-    medium: string;
-    primaryImage: string;
-    department: string;
-}
+
 
 // OpenAI API response types
 interface OpenAIEmbeddingResponse {
@@ -63,139 +54,75 @@ async function searchMET(query: string) {
     searchParams.append("q", query);
     searchParams.append("hasImages", "true");
 
-    console.log("FETCHING ARTWORK FROM", `${baseUrl}?${searchParams}`);
+    console.log("🌐 Fetching artwork IDs from Met API:", `${baseUrl}?${searchParams}`);
 
-    const response = await fetch(`${baseUrl}?${searchParams}`, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-    });
-    
-    // Check if the response is OK and contains JSON
-    if (!response.ok) {
-        console.error(`❌ MET API error: ${response.status} ${response.statusText}`);
-        
-        // If rate limited, wait longer before next call
-        if (response.status === 403 || response.status === 429) {
-            console.log(`⏸️  Rate limited! Waiting 10 seconds before next call...`);
-            await new Promise(resolve => setTimeout(resolve, 10000));
-        }
-        
-        throw new Error(`MET API returned ${response.status}: ${response.statusText}`);
-    }
-    
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-        console.error(`❌ MET API returned non-JSON response: ${contentType}`);
-        const text = await response.text();
-        console.error("Response preview:", text.substring(0, 200));
-        
-        // Check if this looks like a rate limiting/bot protection page
-        if (text.includes('ROBOTS') || text.includes('NOINDEX') || text.includes('blocked')) {
-            console.log(`⏸️  Detected bot protection! Waiting 30 seconds before next call...`);
-            await new Promise(resolve => setTimeout(resolve, 30000));
-        }
-        
-        throw new Error('MET API returned non-JSON response (possibly rate limited or down)');
-    }
-
-    const data = await response.json() as METSearchResponse;
-
-    console.log("📊 Found", data.total, "artworks");
-
-    // Get first 50 object IDs
-    const objectIds: number[] = data.objectIDs?.slice(0, 50) || [];
-    
-    // Check which object IDs exist in our database
-    const existingObjectIds = await getExistingObjectIds(objectIds);
-    
-    // Filter to only the objects that exist in our database
-    const validObjectIds = objectIds.filter(id => existingObjectIds.includes(id));
-    
-    // Check which of the valid objects need image updates (primary_image is null)
-    const objectsNeedingImages = await getArtworksNeedingImages(validObjectIds);
-    
-    console.log(`📦 Found ${validObjectIds.length} artworks in database, ${objectsNeedingImages.length} need image updates`);
-
-    // Fetch images for objects that need them
-    const imageUpdates: { object_id: number; primary_image: string }[] = [];
-    
-    if (objectsNeedingImages.length > 0) {
-        console.log("🌐 Fetching images from MET API...");
-        
-        const imagePromises = objectsNeedingImages.map(async (id: number) => {
-            try {
-                // Rate limiting for individual object requests
-                await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay between object requests
-                
-                const objResponse = await fetch(
-                    `https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`,
-                    {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                        }
-                    }
-                );
-                
-                // Check if individual object response is valid JSON
-                if (!objResponse.ok) {
-                    console.error(`❌ MET object API error for ${id}: ${objResponse.status}`);
-                    
-                    // If rate limited, wait longer
-                    if (objResponse.status === 403 || objResponse.status === 429) {
-                        console.log(`⏸️  Object API rate limited for ${id}! Waiting 5 seconds...`);
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                    }
-                    
-                    return null;
-                }
-                
-                const objContentType = objResponse.headers.get('content-type');
-                if (!objContentType || !objContentType.includes('application/json')) {
-                    console.error(`❌ MET object API returned non-JSON for ${id}: ${objContentType}`);
-                    return null;
-                }
-                
-                const objData = await objResponse.json() as METObjectResponse;
-
-                // Only update if we got a valid image URL
-                if (objData.primaryImage && objData.primaryImage.trim() !== '') {
-                    return {
-                        object_id: id,
-                        primary_image: objData.primaryImage
-                    };
-                } else {
-                    console.log(`⚠️  No image available for artwork ${id}`);
-                    return null;
-                }
-            } catch (error) {
-                console.error(`❌ Error fetching image for object ${id}:`, error);
-                return null;
+    try {
+        const response = await fetch(`${baseUrl}?${searchParams}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
         });
-
-        const results = await Promise.all(imagePromises);
-        imageUpdates.push(...results.filter(Boolean) as { object_id: number; primary_image: string }[]);
         
-        // Update the database with new images
-        if (imageUpdates.length > 0) {
-            console.log(`🖼️ Updating ${imageUpdates.length} artwork images in database`);
-            await updateArtworkImages(imageUpdates);
+        // Check if the response is OK and contains JSON
+        if (!response.ok) {
+            console.error(`❌ MET API error: ${response.status} ${response.statusText}`);
+            
+            // If rate limited, wait longer before next call
+            if (response.status === 403 || response.status === 429) {
+                console.log(`⏸️  Rate limited! Waiting 10 seconds before next call...`);
+                await new Promise(resolve => setTimeout(resolve, 10000));
+            }
+            
+            throw new Error(`MET API returned ${response.status}: ${response.statusText}`);
         }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error(`❌ MET API returned non-JSON response: ${contentType}`);
+            const text = await response.text();
+            console.error("Response preview:", text.substring(0, 200));
+            
+            // Check if this looks like a rate limiting/bot protection page
+            if (text.includes('ROBOTS') || text.includes('NOINDEX') || text.includes('blocked')) {
+                console.log(`⏸️  Detected bot protection! Waiting 30 seconds before next call...`);
+                await new Promise(resolve => setTimeout(resolve, 30000));
+            }
+            
+            throw new Error('MET API returned non-JSON response (possibly rate limited or down)');
+        }
+
+        const data = await response.json() as METSearchResponse;
+
+        console.log("📊 Met API returned", data.total, "total artworks");
+
+        // Get first 50 object IDs from Met API
+        const objectIds: number[] = data.objectIDs?.slice(0, 50) || [];
+        console.log(`🔍 Got ${objectIds.length} artwork IDs from Met API`);
+        
+        // Fetch artworks from our database that match these IDs AND have images
+        const artworks = await getArtworksByObjectIds(objectIds);
+        const artworksWithImages = artworks.filter(artwork => 
+            artwork.primary_image && artwork.primary_image.trim() !== ''
+        );
+
+        console.log(`📦 Found ${artworks.length} artworks in our database`);
+        console.log(`🎨 Returning ${artworksWithImages.length} artworks with images`);
+
+        return {
+            total: data.total,
+            artworks: artworksWithImages,
+        };
+
+    } catch (error) {
+        console.error("❌ Error in searchMET:", error);
+        
+        // Return empty results instead of throwing
+        console.log("🔄 Returning empty results due to Met API error");
+        return {
+            total: 0,
+            artworks: [],
+        };
     }
-
-    // Get all artworks from our DB and filter to only include ones with images
-    const allArtworks = await getArtworksByObjectIds(validObjectIds);
-    const artworksWithImages = allArtworks.filter(artwork => 
-        artwork.primary_image && artwork.primary_image.trim() !== ''
-    );
-
-    console.log(`🎨 Returning ${artworksWithImages.length} artworks with images out of ${validObjectIds.length} total`);
-
-    return {
-        total: data.total,
-        artworks: artworksWithImages,
-    };
 }
 
 // POST /api/artwork/search
